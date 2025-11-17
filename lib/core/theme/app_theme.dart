@@ -1,56 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    // Palet Warna Utama
+
+    // 1. Palet Warna Utama & Font
+    // Gunakan GoogleFonts.interTextTheme untuk menerapkan font ke seluruh Theme
+    textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
     primaryColor: AppColors.primary,
 
-    // Warna Latar Belakang
-    scaffoldBackgroundColor: AppColors.background,
+    // fontFamily: 'Inter',
 
-    // App Bar
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.background,
-      foregroundColor: AppColors.textPrimary,
-      elevation: 0, // App Bar tanpa bayangan (flat design)
+    // 2. Background
+    scaffoldBackgroundColor: AppColors.background, // F9FAFB
+
+    // 3. App Bar
+    appBarTheme: AppBarTheme(
+      // Hapus const karena kita menggunakan GoogleFonts
+      backgroundColor: AppColors.background, // F9FAFB
+      foregroundColor: AppColors.textPrimary, // Hitam
+      elevation: 0,
       centerTitle: true,
+      // Gunakan GoogleFonts.inter() secara eksplisit
+      titleTextStyle: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: AppColors.textPrimary,
+      ),
     ),
 
-    // Input Fields (TextFormField)
+    // 4. Input Fields (TextFormField)
     inputDecorationTheme: InputDecorationTheme(
-      fillColor: AppColors.cardBackground,
+      fillColor: AppColors.fieldBackground, // ECECF0
       filled: true,
+      // Gunakan GoogleFonts.inter() untuk hintStyle
+      hintStyle: GoogleFonts.inter(
+        color: AppColors.textPlaceholder, // 898989
+        fontWeight: FontWeight.w400,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8.0),
-        borderSide: BorderSide.none,
+        borderSide: BorderSide.none, // Tidak ada border yang terlihat
       ),
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      hintStyle: TextStyle(color: AppColors.textSecondary),
     ),
 
-    // Bottom Navigation Bar
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: AppColors.background,
+    // 5. Bottom Navigation Bar
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: AppColors.white,
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppColors.textSecondary,
+      unselectedItemColor: AppColors.textPlaceholder,
+      elevation: 8,
     ),
 
-    // Tombol (Contoh: Tombol Login/Simpan yang Hitam)
+    // 6. Tombol (ElevatedButton - Tombol Hitam Solid)
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary, // Warna Hitam Solid
-        foregroundColor: AppColors.background, // Teks Putih
-        minimumSize: const Size(double.infinity, 50), // Lebar penuh
+        backgroundColor: AppColors.primary, // Hitam Solid (000000)
+        foregroundColor: AppColors.white, // Teks Putih
+        minimumSize: const Size(double.infinity, 50),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
         ),
-        textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        // Gunakan GoogleFonts.inter() untuk textStyle
+        textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
       ),
     ),
 
-    // Tambahkan style Text, Card, dan lain-lain di sini
+    // 7. Card Theme (Untuk Card View di Home/Warehouse)
+    cardTheme: CardTheme(
+      color: AppColors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+    ),
   );
 }
