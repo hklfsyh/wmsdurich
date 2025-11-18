@@ -19,7 +19,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   void _checkAuthState() async {
-    await Future.delayed(const Duration(seconds: 10));
+    await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
       context.go('/login');
@@ -28,27 +28,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              AssetPaths.durichLogo,
-              height: 100,
-              width: 100,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'DURICH WAREHOUSE MANAGEMENT',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+          child: Image.asset(
+            AssetPaths.durichLogo,
+            height: screenHeight * 0.33,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );

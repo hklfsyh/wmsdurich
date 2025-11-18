@@ -23,6 +23,12 @@ class AppTheme {
       foregroundColor: AppColors.textPrimary, // Hitam
       elevation: 0,
       centerTitle: true,
+      shape: Border(
+        bottom: BorderSide(
+          color: AppColors.fieldBackground, // Menggunakan ECECF0 untuk garis
+          width: 1.0,
+        ),
+      ),
       // Gunakan GoogleFonts.inter() secara eksplisit
       titleTextStyle: GoogleFonts.inter(
         fontSize: 18,

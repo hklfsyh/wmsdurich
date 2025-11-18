@@ -35,7 +35,7 @@ class AppColors {
       Color(0xFFA65F00); // Kuning Tua (Aksen/Teks)
   // Merah/Rusak
   static const Color statusDangerLight =
-      Color(0xFEF2F2); // Merah Muda (Background Card)
+      Color(0xFFFEF2F2); // Merah Muda (Background Card)
   static const Color statusDangerDark =
       Color(0xFFC10007); // Merah Tua (Aksen/Teks)
 
@@ -44,5 +44,6 @@ class AppColors {
   static const Color blueDark = Color(0xFF155DFC);
   static const Color orangeLight = Color(0xFFFFF7ED);
   static const Color orangeDark = Color(0xFFCA3500);
-  static const Color redSolid = Color(0xFFE7000B); // Merah #E7000B
+  static const Color redSolid = Color(0xFFE7000B);
+  static const Color inactiveGray = Color(0xFFC7C7C7);
 }
