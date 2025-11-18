@@ -73,8 +73,8 @@ class WarehouseSummaryCard extends StatelessWidget {
                 ),
                 _buildStatusItem(
                   context,
-                  title: 'Hilang',
-                  value: model.hilang.toString(),
+                  title: 'Hancur',
+                  value: model.hancur.toString(),
                   bgColor: AppColors.statusDangerLight,
                   valueColor: AppColors.statusDangerDark,
                   isStatusTitle: true,

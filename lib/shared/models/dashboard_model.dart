@@ -3,7 +3,7 @@ class DashboardModel {
   final int totalDurian;
   final int bagus;
   final int busuk;
-  final int hilang;
+  final int hancur;
 
   // Ringkasan Penjualan
   final double terjualKg;
@@ -15,7 +15,7 @@ class DashboardModel {
     required this.totalDurian,
     required this.bagus,
     required this.busuk,
-    required this.hilang,
+    required this.hancur,
     required this.terjualKg,
     required this.totalPendapatanJuta,
     required this.pulpingKg,
@@ -27,7 +27,7 @@ class DashboardModel {
     totalDurian: 4,
     bagus: 2,
     busuk: 1,
-    hilang: 1,
+    hancur: 1,
     terjualKg: 25.5,
     totalPendapatanJuta: 3.8,
     pulpingKg: 5.2,
