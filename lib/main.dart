@@ -16,7 +16,14 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Durich WMS',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme.copyWith(
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
+      ),
       routerConfig: router,
     );
   }

@@ -1,57 +1,89 @@
-// lib/features/home/presentation/home_shell.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/core/constants/asset_paths.dart';
 
-// Mapping Index ke Path GoRouter
 const List<String> homeShellRoutes = [
   '/home',
   '/home/warehouse',
   '/home/sales'
 ];
 
-class HomeShell extends StatelessWidget {
-  // GoRouter akan otomatis memberikan child (sub-route) yang sedang aktif di sini
+class HomeShell extends StatefulWidget {
   final Widget child;
   const HomeShell({super.key, required this.child});
 
-  // Fungsi untuk menentukan index BottomNavBar berdasarkan path URL saat ini
-  int _calculateSelectedIndex(BuildContext context) {
-    // Dapatkan path URL saat ini (misal: /home/warehouse)
-    final String location = GoRouterState.of(context).fullPath ?? '/home';
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
 
-    // Temukan index path tersebut dalam daftar homeShellRoutes
-    return homeShellRoutes.indexOf(location);
+class _HomeShellState extends State<HomeShell> {
+  int _previousIndex = 0;
+
+  int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).fullPath ?? '/home';
+    final index = homeShellRoutes.indexOf(location);
+    return index != -1 ? index : 0;
   }
 
-  // Fungsi yang dipanggil ketika item BottomNavBar diklik
   void _onItemTapped(BuildContext context, int index) {
-    // Navigasi menggunakan GoRouter ke path yang sesuai
+    // Update previous index sebelum navigasi
+    setState(() {
+      _previousIndex = _calculateSelectedIndex(context);
+    });
     context.go(homeShellRoutes[index]);
   }
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
+    
+    // Tentukan arah slide berdasarkan posisi sebelumnya dan sekarang
+    final isSlideRight = selectedIndex > _previousIndex;
 
     return Scaffold(
-      body: child,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+          return Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          );
+        },
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // Offset untuk slide animation
+          // Jika index naik (0->1, 1->2): slide dari kanan (1.0) ke tengah (0.0)
+          // Jika index turun (2->1, 1->0): slide dari kiri (-1.0) ke tengah (0.0)
+          final offsetAnimation = Tween<Offset>(
+            begin: Offset(isSlideRight ? 1.0 : -1.0, 0.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,
+          ));
 
-      // Bottom Navigation Bar
+          return SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(selectedIndex),
+          child: widget.child,
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: (index) => _onItemTapped(context, index),
-
-        // 1. Styling Warna
         selectedItemColor: AppColors.black,
         unselectedItemColor: AppColors.inactiveGray,
-
-        // Atur label ke always show
         showUnselectedLabels: true,
-
         items: [
-          // Home
           BottomNavigationBarItem(
             icon: Image.asset(
               selectedIndex == 0 ? AssetPaths.homeBlack : AssetPaths.homeGray,
@@ -59,7 +91,6 @@ class HomeShell extends StatelessWidget {
             ),
             label: 'Home',
           ),
-          // Warehouse
           BottomNavigationBarItem(
             icon: Image.asset(
               selectedIndex == 1 ? AssetPaths.boxBlack : AssetPaths.boxGray,
@@ -67,7 +98,6 @@ class HomeShell extends StatelessWidget {
             ),
             label: 'Warehouse',
           ),
-          // Sales
           BottomNavigationBarItem(
             icon: Image.asset(
               selectedIndex == 2 ? AssetPaths.salesBlack : AssetPaths.salesGray,

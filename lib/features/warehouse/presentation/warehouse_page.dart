@@ -1,31 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:wms_durich/core/constants/asset_paths.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/core/router/dialog_transitions.dart';
+import 'package:wms_durich/shared/widgets/app_notification.dart';
 import 'package:wms_durich/features/warehouse/presentation/widgets/warehouse_item_card.dart';
 import 'package:wms_durich/features/warehouse/presentation/widgets/delete_confirmation_dialog.dart';
+import 'package:wms_durich/features/warehouse/presentation/widgets/edit_data_dialog.dart';
+import 'package:wms_durich/features/warehouse/presentation/widgets/add_data_dialog.dart';
+import 'package:wms_durich/features/warehouse/presentation/widgets/add_pengiriman_dialog.dart';
 import 'package:wms_durich/shared/models/warehouse_model.dart';
 
 class WarehousePage extends StatelessWidget {
   const WarehousePage({super.key});
 
   void _showDeleteDialog(BuildContext context, WarehouseModel item) {
-    showDialog(
+    DialogTransitions.showAnimatedDialog(
       context: context,
-      // 👇 PENTING: Atur overlay hitam transparan (Opacity 55%)
       barrierColor: Colors.black.withOpacity(0.55),
-      builder: (context) {
-        return DeleteConfirmationDialog(
-          item: item,
-          onConfirm: () {
-            // TODO: Implementasikan logika DELETE API GoLang di sini
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content:
-                      Text('Simulasi: Menghapus data ${item.warehouseId}')),
-            );
-          },
-        );
-      },
+      dialog: DeleteConfirmationDialog(
+        item: item,
+        onConfirm: () {
+          AppNotification.show(
+            context,
+            message: 'Data ${item.warehouseId} berhasil dihapus',
+            type: NotificationType.success,
+          );
+        },
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, WarehouseModel item) {
+    DialogTransitions.showSlideUpDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.55),
+      dialog: EditDataDialog(
+        item: item,
+        onSave: (newCondition, newWeight) {
+          AppNotification.show(
+            context,
+            message: 'Data ${item.warehouseId} berhasil diperbarui',
+            type: NotificationType.success,
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAddDataDialog(BuildContext context) {
+    DialogTransitions.showSlideUpDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.55),
+      dialog: const AddDataDialog(),
+    );
+  }
+
+  void _showAddPengirimanDialog(BuildContext context) {
+    DialogTransitions.showSlideUpDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.55),
+      dialog: const AddPengirimanDialog(),
     );
   }
 
@@ -73,11 +110,23 @@ class WarehousePage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.fieldBackground),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: IconButton(
                     icon: Image.asset(AssetPaths.refreshBlack, height: 20),
                     onPressed: () {
-                      // Logic refresh data
+                      AppNotification.show(
+                        context,
+                        message: 'Data berhasil direfresh',
+                        type: NotificationType.success,
+                      );
                     },
                   ),
                 ),
@@ -91,7 +140,7 @@ class WarehousePage extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      // Navigasi ke Add Data Page
+                      _showAddDataDialog(context);
                     },
                     icon: const Icon(Icons.add, color: AppColors.white),
                     label: const Text('Add Data',
@@ -109,7 +158,7 @@ class WarehousePage extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      // Navigasi ke Add Pengiriman Page
+                      _showAddPengirimanDialog(context);
                     },
                     icon: Image.asset(AssetPaths.truckBlack,
                         height: 20), // Ikon Add Pengiriman
@@ -150,7 +199,7 @@ class WarehousePage extends StatelessWidget {
                     child: WarehouseItemCard(
                       model: item,
                       onEdit: () {
-                        // Implementasi Edit/Update
+                        _showEditDialog(context, item);
                       },
                       onDelete: () {
                         _showDeleteDialog(context, item);

@@ -25,4 +25,8 @@ class AssetPaths {
   static const String eyeBlack =
       '${_basePath}eye_black.png'; // Password Show/Hide
   static const String eyeGray = '${_basePath}eye_gray.png';
+  static const String closeBlack = '${_basePath}close_black.png';
+  static const String closeGray = '${_basePath}close_gray.png';
+  static const String downGray = '${_basePath}down_gray.png';
+  static const String updownGray = '${_basePath}updown_gray.png';
 }
