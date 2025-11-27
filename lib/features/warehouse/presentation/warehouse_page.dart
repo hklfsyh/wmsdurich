@@ -1,63 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:wms_durich/core/constants/asset_paths.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/core/router/dialog_transitions.dart';
-import 'package:wms_durich/shared/widgets/app_notification.dart';
-import 'package:wms_durich/features/warehouse/presentation/widgets/warehouse_item_card.dart';
-import 'package:wms_durich/features/warehouse/presentation/widgets/delete_confirmation_dialog.dart';
-import 'package:wms_durich/features/warehouse/presentation/widgets/edit_data_dialog.dart';
-import 'package:wms_durich/features/warehouse/presentation/widgets/add_data_dialog.dart';
+import 'package:wms_durich/features/warehouse/presentation/add_buah_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/widgets/add_pengiriman_dialog.dart';
-import 'package:wms_durich/shared/models/warehouse_model.dart';
 
 class WarehousePage extends StatelessWidget {
   const WarehousePage({super.key});
 
-  void _showDeleteDialog(BuildContext context, WarehouseModel item) {
-    DialogTransitions.showAnimatedDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.55),
-      dialog: DeleteConfirmationDialog(
-        item: item,
-        onConfirm: () {
-          AppNotification.show(
-            context,
-            message: 'Data ${item.warehouseId} berhasil dihapus',
-            type: NotificationType.success,
-          );
-        },
-      ),
+  void _showAddBuahDialog(BuildContext context) {
+    // Navigasi ke halaman Add Buah
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddBuahPage()),
     );
   }
 
-  void _showEditDialog(BuildContext context, WarehouseModel item) {
-    DialogTransitions.showSlideUpDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.55),
-      dialog: EditDataDialog(
-        item: item,
-        onSave: (newCondition, newWeight) {
-          AppNotification.show(
-            context,
-            message: 'Data ${item.warehouseId} berhasil diperbarui',
-            type: NotificationType.success,
-          );
-        },
-      ),
+  void _showAddLotStockDialog(BuildContext context) {
+    // Navigasi ke halaman Add Lot Stock
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddLotStockPage()),
     );
   }
 
-  void _showAddDataDialog(BuildContext context) {
-    DialogTransitions.showSlideUpDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.55),
-      dialog: const AddDataDialog(),
-    );
-  }
-
-  void _showAddPengirimanDialog(BuildContext context) {
+  void _showKirimBuahDialog(BuildContext context) {
     DialogTransitions.showSlideUpDialog(
       context: context,
       barrierDismissible: false,
@@ -68,8 +36,10 @@ class WarehousePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Data Dummy
-    final data = WarehouseModel.dummyData;
+    // Data Dummy untuk statistik
+    final int totalBuahMasukHariIni = 150; // kg
+    final int lotStockReady = 5; // lot
+    final int lotStockDikirim = 3; // lot
 
     return Scaffold(
       appBar: AppBar(
@@ -77,74 +47,22 @@ class WarehousePage extends StatelessWidget {
         automaticallyImplyLeading: false,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 8),
-
-            // 1. Search Bar dan Refresh Button
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cari ID atau nama buah...',
-                      hintStyle:
-                          const TextStyle(color: AppColors.textPlaceholder),
-                      prefixIcon:
-                          Image.asset(AssetPaths.searchGray, height: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: AppColors.fieldBackground,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 0, horizontal: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.fieldBackground),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Image.asset(AssetPaths.refreshBlack, height: 20),
-                    onPressed: () {
-                      AppNotification.show(
-                        context,
-                        message: 'Data berhasil direfresh',
-                        type: NotificationType.success,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // 2. Add Data Button dan Add Pengiriman Button
+            // 1. Tombol Add Buah dan Add Lot Stock
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      _showAddDataDialog(context);
-                    },
-                    icon: const Icon(Icons.add, color: AppColors.white),
-                    label: const Text('Add Data',
-                        style: TextStyle(color: AppColors.white)),
+                    onPressed: () => _showAddBuahDialog(context),
+                    icon: const Icon(LucideIcons.plus,
+                        color: AppColors.white, size: 20),
+                    label: const Text('Add Buah',
+                        style: TextStyle(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -154,23 +72,23 @@ class WarehousePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      _showAddPengirimanDialog(context);
-                    },
-                    icon: Image.asset(AssetPaths.truckBlack,
-                        height: 20), // Ikon Add Pengiriman
-                    label: const Text('Add Pengiriman',
-                        style: TextStyle(color: AppColors.black)),
+                    onPressed: () => _showAddLotStockDialog(context),
+                    icon: const Icon(LucideIcons.package,
+                        color: AppColors.black, size: 20),
+                    label: const Text('Add Lot Stock',
+                        style: TextStyle(
+                            color: AppColors.black,
+                            fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        side:
-                            const BorderSide(color: AppColors.fieldBackground),
+                        side: const BorderSide(
+                            color: AppColors.fieldBackground, width: 1.5),
                       ),
                       elevation: 0,
                     ),
@@ -178,39 +96,150 @@ class WarehousePage extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-            // 3. Status Display
-            const Text(
-              'Menampilkan 4 data terbaru',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-            ),
-            const SizedBox(height: 8),
-
-            // 4. List Data Warehouse
+            // 2. List Item dengan Statistik
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: data.length,
-                itemBuilder: (context, index) {
-                  final item = data[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 1.0),
-                    child: WarehouseItemCard(
-                      model: item,
-                      onEdit: () {
-                        _showEditDialog(context, item);
-                      },
-                      onDelete: () {
-                        _showDeleteDialog(context, item);
-                      },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppColors.fieldBackground, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                  );
-                },
+                  ],
+                ),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    // Item 1: Total Buah Masuk Hari Ini
+                    _buildStatCard(
+                      icon: LucideIcons.truck,
+                      iconColor: Colors.blue,
+                      iconBgColor: Colors.blue.withOpacity(0.1),
+                      title: 'Total Buah Masuk Hari Ini',
+                      value: '$totalBuahMasukHariIni kg',
+                      subtitle: 'Dari kebun ke gudang',
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Item 2: Lot Stock Ready
+                    _buildStatCard(
+                      icon: LucideIcons.package,
+                      iconColor: Colors.green,
+                      iconBgColor: Colors.green.withOpacity(0.1),
+                      title: 'Lot Stock Ready',
+                      value: '$lotStockReady lot',
+                      subtitle: 'Siap untuk dikirim',
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Item 3: Lot Stock Dikirim
+                    _buildStatCard(
+                      icon: LucideIcons.send,
+                      iconColor: Colors.orange,
+                      iconBgColor: Colors.orange.withOpacity(0.1),
+                      title: 'Lot Stock Dikirim',
+                      value: '$lotStockDikirim lot',
+                      subtitle: 'Dalam perjalanan ke toko',
+                    ),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // 3. Tombol Kirim Buah
+            ElevatedButton.icon(
+              onPressed: () => _showKirimBuahDialog(context),
+              icon: const Icon(LucideIcons.send,
+                  color: AppColors.white, size: 20),
+              label: const Text('Kirim Buah',
+                  style: TextStyle(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.black,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String value,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.fieldBackground.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.fieldBackground),
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textPlaceholder,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
