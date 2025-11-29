@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wms_durich/core/constants/asset_paths.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
 
-// Kita gunakan ConsumerStatefulWidget karena kita akan mengelola state visibility password
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -16,7 +16,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false; // State untuk visibility password
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -25,47 +25,62 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  // TODO: Fungsi ini akan dihubungkan ke logika otentikasi API GoLang
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      // Data berhasil divalidasi
       final username = _usernameController.text;
       final password = _passwordController.text;
 
-      // TODO: Panggil provider auth untuk POST data ke API GoLang
-      print('Mencoba Login dengan: $username / $password');
+      // Close keyboard
+      FocusScope.of(context).unfocus();
 
-      // Setelah berhasil, arahkan ke /home
-      context.go('/home');
+      // Call provider
+      await ref.read(authProvider.notifier).login(username, password);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final authState = ref.watch(authProvider);
+
+    ref.listen(authProvider, (previous, next) {
+      if (next.error != null && !next.isLoading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (next.isAuthenticated && !next.isLoading) {
+        final user = next.user;
+        if (user?.isAdmin ?? false) {
+          context.go('/home');
+        } else if (user?.isWarehouse ?? false) {
+          context.go('/home/warehouse');
+        } else if (user?.isSales ?? false) {
+          context.go('/home/sales');
+        } else {
+          context.go('/home');
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        // MENGHAPUS LayoutBuilder DAN ConstrainedBox
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Jarak paling atas yang kecil (Manual Bias)
-              // Ini menggantikan pemusatan otomatis, menggeser konten ke atas.
               const SizedBox(height: 30),
 
               // 1. Logo Aplikasi
-              // Ukuran logo tetap 25% (sudah dikecilkan)
               Image.asset(
                 AssetPaths.durichLogo,
                 height: screenHeight * 0.25,
                 fit: BoxFit.contain,
               ),
-
-              // Jarak antara Logo dan Card tetap 0
 
               // 2. Card Login
               Card(
@@ -80,7 +95,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Judul Login
                         const Text(
                           'Login',
                           style: TextStyle(
@@ -91,29 +105,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Input Field (rata kiri)
+                        // Input Fields
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Input Username
-                            const Text('Username',
+                            const Text('Username (Email)',
                                 style: TextStyle(fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _usernameController,
+                              keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(
-                                hintText: 'Masukkan username anda..',
+                                hintText: 'Masukkan email anda..',
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Username wajib diisi';
+                                  return 'Username/Email wajib diisi';
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 20),
 
-                            // Input Password
                             const Text('Password',
                                 style: TextStyle(fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
@@ -148,16 +161,27 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         const SizedBox(height: 30),
 
                         // Tombol Login
-                        ElevatedButton(
-                          onPressed: _handleLogin,
-                          child: const Text('Login'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: authState.isLoading ? null : _handleLogin,
+                            child: authState.isLoading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Login'),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-              // Jarak di bawah agar SCV berfungsi
               const SizedBox(height: 50),
             ],
           ),

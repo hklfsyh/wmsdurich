@@ -1,0 +1,65 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wms_durich/core/network/dio_provider.dart';
+import 'package:wms_durich/features/warehouse/data/models/buah_raw_models.dart';
+
+final buahRawRemoteDataSourceProvider = Provider<BuahRawRemoteDataSource>((ref) {
+  return BuahRawRemoteDataSourceImpl(ref.read(dioProvider));
+});
+
+abstract class BuahRawRemoteDataSource {
+  Future<BuahRawBulkResponse> createBulkBuahRaw(BuahRawBulkRequest request);
+  Future<UnsortedBuahResponse> getUnsortedBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+  });
+}
+
+class BuahRawRemoteDataSourceImpl implements BuahRawRemoteDataSource {
+  final Dio _dio;
+
+  BuahRawRemoteDataSourceImpl(this._dio);
+
+  @override
+  Future<BuahRawBulkResponse> createBulkBuahRaw(BuahRawBulkRequest request) async {
+    try {
+      final response = await _dio.post(
+        '/v1/buah-raw/bulk',
+        data: request.toJson(),
+      );
+      return BuahRawBulkResponse.fromJson(response.data['data']);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UnsortedBuahResponse> getUnsortedBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+      };
+      if (kodeBuah != null && kodeBuah.isNotEmpty) {
+        queryParams['kode_buah'] = kodeBuah;
+      }
+      if (jenisDurianId != null && jenisDurianId.isNotEmpty) {
+        queryParams['jenis_durian_id'] = jenisDurianId;
+      }
+      final response = await _dio.get(
+        '/v1/buah-raw/unsorted',
+        queryParameters: queryParams,
+      );
+      return UnsortedBuahResponse.fromJson(response.data['data']);
+    } catch (e) {
+      rethrow;
+    }
+  }
+}

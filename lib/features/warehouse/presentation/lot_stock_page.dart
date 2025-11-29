@@ -6,16 +6,16 @@ import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_detail_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 
-class LotInProcessPage extends ConsumerWidget {
-  const LotInProcessPage({super.key});
+class LotStockPage extends ConsumerWidget {
+  const LotStockPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final draftLotsAsync = ref.watch(allDraftLotsProvider);
+    final readyLotsAsync = ref.watch(allReadyLotsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Lot Stock - Detail'),
+        title: const Text('Lot Stock Ready'),
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
@@ -26,22 +26,22 @@ class LotInProcessPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.blueLight,
+              color: AppColors.statusSuccessLight,
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade300),
               ),
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.packageOpen,
-                    color: AppColors.blueDark, size: 28),
+                Icon(LucideIcons.packageCheck,
+                    color: AppColors.statusSuccessDark, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Lot In-Process',
+                        'Lot Siap Kirim',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -49,13 +49,13 @@ class LotInProcessPage extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      draftLotsAsync.when(
+                      readyLotsAsync.when(
                         data: (response) => Text(
                           '${response.data.length} Lot',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.blueDark,
+                            color: AppColors.statusSuccessDark,
                           ),
                         ),
                         loading: () => const Text(
@@ -63,7 +63,7 @@ class LotInProcessPage extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.blueDark,
+                            color: AppColors.statusSuccessDark,
                           ),
                         ),
                         error: (_, __) => const Text(
@@ -71,7 +71,7 @@ class LotInProcessPage extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.blueDark,
+                            color: AppColors.statusSuccessDark,
                           ),
                         ),
                       ),
@@ -79,22 +79,22 @@ class LotInProcessPage extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => ref.invalidate(allDraftLotsProvider),
+                  onPressed: () => ref.invalidate(allReadyLotsProvider),
                   icon: const Icon(LucideIcons.refreshCw),
-                  color: AppColors.blueDark,
+                  color: AppColors.statusSuccessDark,
                 ),
               ],
             ),
           ),
           Expanded(
-            child: draftLotsAsync.when(
+            child: readyLotsAsync.when(
               data: (response) {
                 if (response.data.isEmpty) {
                   return _buildEmptyState();
                 }
                 return RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(allDraftLotsProvider);
+                    ref.invalidate(allReadyLotsProvider);
                   },
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
@@ -114,45 +114,6 @@ class LotInProcessPage extends ConsumerWidget {
               error: (error, stack) => _buildErrorState(error, ref),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(LucideIcons.arrowLeft, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Kembali ke Warehouse',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -170,7 +131,7 @@ class LotInProcessPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Tidak ada Lot Draft',
+            'Tidak ada Lot Ready',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -179,7 +140,7 @@ class LotInProcessPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Buat lot baru untuk memulai',
+            'Lot yang sudah difinalisasi akan tampil di sini',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -220,7 +181,7 @@ class LotInProcessPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => ref.invalidate(allDraftLotsProvider),
+            onPressed: () => ref.invalidate(allReadyLotsProvider),
             icon: const Icon(LucideIcons.refreshCw, size: 18),
             label: const Text('Coba Lagi'),
             style: ElevatedButton.styleFrom(
@@ -247,7 +208,7 @@ class LotInProcessPage extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: AppColors.statusSuccessDark.withOpacity(0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -262,15 +223,15 @@ class LotInProcessPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: AppColors.statusSuccessLight,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(12)),
               ),
               child: Row(
                 children: [
                   Icon(
-                    LucideIcons.package,
-                    color: AppColors.blueDark,
+                    LucideIcons.packageCheck,
+                    color: AppColors.statusSuccessDark,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -289,7 +250,7 @@ class LotInProcessPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${lot.qtyAwal} Buah',
+                          '${lot.qtyAwal} Buah • ${lot.beratAwal} kg',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -302,13 +263,13 @@ class LotInProcessPage extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.orangeLight,
+                      color: AppColors.statusSuccessDark,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      lot.status,
-                      style: const TextStyle(
-                        color: AppColors.orangeDark,
+                    child: const Text(
+                      'READY',
+                      style: TextStyle(
+                        color: Colors.white,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -344,26 +305,26 @@ class LotInProcessPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.blueLight.withOpacity(0.5),
+                color: AppColors.statusSuccessLight.withOpacity(0.5),
                 borderRadius:
                     const BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.eye, size: 16, color: AppColors.blueDark),
+                  Icon(LucideIcons.eye, size: 16, color: AppColors.statusSuccessDark),
                   const SizedBox(width: 8),
                   Text(
                     'Lihat Detail',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.blueDark,
+                      color: AppColors.statusSuccessDark,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(LucideIcons.chevronRight,
-                      size: 16, color: AppColors.blueDark),
+                      size: 16, color: AppColors.statusSuccessDark),
                 ],
               ),
             ),

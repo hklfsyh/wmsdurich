@@ -16,10 +16,10 @@ class EditDataDialog extends StatefulWidget {
   final Function(DurianCondition, double) onSave;
 
   const EditDataDialog({
-    Key? key,
+    super.key,
     required this.item,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<EditDataDialog> createState() => _EditDataDialogState();
