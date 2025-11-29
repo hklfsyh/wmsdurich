@@ -110,19 +110,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           child: widget.child,
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _previousIndex = selectedIndex;
-          });
-          context.go(navItems[index]['path'] as String);
-        },
-        selectedItemColor: AppColors.black,
-        unselectedItemColor: AppColors.inactiveGray,
-        showUnselectedLabels: true,
-        items: navItems.map((e) => e['item'] as BottomNavigationBarItem).toList(),
-      ),
+      bottomNavigationBar: navItems.length < 2
+          ? null
+          : BottomNavigationBar(
+              currentIndex: selectedIndex,
+              onTap: (index) {
+                setState(() {
+                  _previousIndex = selectedIndex;
+                });
+                context.go(navItems[index]['path'] as String);
+              },
+              selectedItemColor: AppColors.black,
+              unselectedItemColor: AppColors.inactiveGray,
+              showUnselectedLabels: true,
+              items: navItems
+                  .map((e) => e['item'] as BottomNavigationBarItem)
+                  .toList(),
+            ),
     );
   }
 }

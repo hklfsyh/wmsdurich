@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/core/widgets/profile_dropdown.dart';
 import 'package:wms_durich/features/warehouse/presentation/add_buah_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
@@ -57,6 +58,10 @@ class WarehousePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Warehouse Management'),
         automaticallyImplyLeading: false,
+        actions: [
+          const ProfileDropdown(),
+          const SizedBox(width: 16),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
