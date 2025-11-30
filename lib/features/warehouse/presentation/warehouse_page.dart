@@ -36,17 +36,17 @@ class WarehousePage extends ConsumerWidget {
     );
   }
 
-  void _showListBuahPage(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ListBuahPage()),
-    );
-  }
-
   void _showLotStockPage(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const LotStockPage()),
+    );
+  }
+
+  void _showListBuahPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ListBuahPage()),
     );
   }
 
@@ -161,7 +161,7 @@ class WarehousePage extends ConsumerWidget {
                           iconBgColor: Colors.blue.withOpacity(0.1),
                           title: 'Total Buah Masuk Hari Ini',
                           value: '${data.totalBuahRawToday} buah',
-                          subtitle: 'Tap untuk lihat daftar buah',
+                          subtitle: 'Data akumulasi hari ini',
                         ),
                       ),
                       const SizedBox(height: 12),

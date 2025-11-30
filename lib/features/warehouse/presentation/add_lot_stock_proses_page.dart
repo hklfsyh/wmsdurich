@@ -5,6 +5,7 @@ import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/buah_raw_models.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_in_process_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/buah_raw_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 
 class AddLotStockProsesPage extends ConsumerStatefulWidget {
@@ -614,7 +615,11 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            // Refresh data buah raw unsorted sebelum kembali
+                            ref.invalidate(unsortedBuahProvider);
+                            Navigator.pop(context);
+                          },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -906,7 +911,7 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
                 return DropdownMenuItem<String>(
                   value: lot.id,
                   child: Text(
-                    '${lot.kode} | ${lot.qtySisa} buah',
+                    '${lot.kode} | ${lot.currentQty} buah',
                     style: const TextStyle(fontSize: 14),
                     overflow: TextOverflow.ellipsis,
                   ),

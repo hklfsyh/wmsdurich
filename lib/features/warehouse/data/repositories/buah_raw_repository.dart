@@ -14,6 +14,15 @@ abstract class BuahRawRepository {
     String? kodeBuah,
     String? jenisDurianId,
   });
+
+  Future<UnsortedBuahResponse> getBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+    String? tglPanen,
+    bool? isSorted,
+  });
 }
 
 class BuahRawRepositoryImpl implements BuahRawRepository {
@@ -38,6 +47,25 @@ class BuahRawRepositoryImpl implements BuahRawRepository {
       limit: limit,
       kodeBuah: kodeBuah,
       jenisDurianId: jenisDurianId,
+    );
+  }
+
+  @override
+  Future<UnsortedBuahResponse> getBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+    String? tglPanen,
+    bool? isSorted,
+  }) async {
+    return await _dataSource.getBuahRaw(
+      page: page,
+      limit: limit,
+      kodeBuah: kodeBuah,
+      jenisDurianId: jenisDurianId,
+      tglPanen: tglPanen,
+      isSorted: isSorted,
     );
   }
 }

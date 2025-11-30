@@ -15,6 +15,15 @@ abstract class BuahRawRemoteDataSource {
     String? kodeBuah,
     String? jenisDurianId,
   });
+  
+  Future<UnsortedBuahResponse> getBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+    String? tglPanen,
+    bool? isSorted,
+  });
 }
 
 class BuahRawRemoteDataSourceImpl implements BuahRawRemoteDataSource {
@@ -55,6 +64,43 @@ class BuahRawRemoteDataSourceImpl implements BuahRawRemoteDataSource {
       }
       final response = await _dio.get(
         '/v1/buah-raw/unsorted',
+        queryParameters: queryParams,
+      );
+      return UnsortedBuahResponse.fromJson(response.data['data']);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UnsortedBuahResponse> getBuahRaw({
+    int page = 1,
+    int limit = 50,
+    String? kodeBuah,
+    String? jenisDurianId,
+    String? tglPanen,
+    bool? isSorted,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+      };
+      if (kodeBuah != null && kodeBuah.isNotEmpty) {
+        queryParams['kode_buah'] = kodeBuah;
+      }
+      if (jenisDurianId != null && jenisDurianId.isNotEmpty) {
+        queryParams['jenis_durian_id'] = jenisDurianId;
+      }
+      if (tglPanen != null && tglPanen.isNotEmpty) {
+        queryParams['tgl_panen'] = tglPanen;
+      }
+      if (isSorted != null) {
+        queryParams['is_sorted'] = isSorted.toString();
+      }
+      
+      final response = await _dio.get(
+        '/v1/buah-raw',
         queryParameters: queryParams,
       );
       return UnsortedBuahResponse.fromJson(response.data['data']);

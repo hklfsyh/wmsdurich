@@ -18,11 +18,24 @@ class ListBuahPage extends ConsumerStatefulWidget {
 
 class _ListBuahPageState extends ConsumerState<ListBuahPage> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
   Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set default filter to today
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      _dateController.text = DateFormat('dd/MM/yyyy').format(DateTime.now());
+      ref.read(buahRawParamsProvider.notifier).setFilters(tglPanen: today);
+    });
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _dateController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -30,14 +43,45 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
   void _onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      ref.read(unsortedBuahParamsProvider.notifier).setSearch(
+      ref.read(buahRawParamsProvider.notifier).setSearch(
         value.isEmpty ? null : value,
       );
     });
   }
 
   void _goToPage(int page) {
-    ref.read(unsortedBuahParamsProvider.notifier).setPage(page);
+    ref.read(buahRawParamsProvider.notifier).setPage(page);
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.black,
+              onPrimary: AppColors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(picked);
+      _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
+      ref.read(buahRawParamsProvider.notifier).setTglPanen(formattedDate);
+    }
+  }
+
+  void _clearDate() {
+    _dateController.clear();
+    ref.read(buahRawParamsProvider.notifier).setTglPanen(null);
   }
 
   String _formatDate(String dateStr) {
@@ -51,58 +95,111 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
 
   @override
   Widget build(BuildContext context) {
-    final buahAsync = ref.watch(unsortedBuahProvider);
-    final params = ref.watch(unsortedBuahParamsProvider);
+    final buahAsync = ref.watch(buahRawProvider);
+    final params = ref.watch(buahRawParamsProvider);
     final jenisDurianAsync = ref.watch(jenisDurianProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Buah Unsorted'),
+        title: const Text('Daftar Buah Masuk'),
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              _searchController.clear();
+              _dateController.clear();
+              ref.read(buahRawParamsProvider.notifier).reset();
+            },
+            icon: const Icon(LucideIcons.refreshCw),
+            tooltip: 'Reset Filter',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Search Bar
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.fieldBackground),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Cari kode buah...',
+                  hintStyle: const TextStyle(color: AppColors.textPlaceholder),
+                  prefixIcon: const Icon(LucideIcons.search, color: AppColors.textSecondary),
+                  suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(LucideIcons.x, color: AppColors.textSecondary),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Filters Row
             Row(
               children: [
+                // Date Filter
                 Expanded(
-                  flex: 2,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.fieldBackground),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      decoration: InputDecoration(
-                        hintText: 'Cari kode buah...',
-                        hintStyle: const TextStyle(color: AppColors.textPlaceholder),
-                        prefixIcon: const Icon(LucideIcons.search, color: AppColors.textSecondary),
-                        suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(LucideIcons.x, color: AppColors.textSecondary),
-                              onPressed: () {
-                                _searchController.clear();
-                                _onSearchChanged('');
-                              },
-                            )
-                          : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  flex: 3,
+                  child: InkWell(
+                    onTap: () => _selectDate(context),
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.fieldBackground),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          const Icon(LucideIcons.calendar, size: 18, color: AppColors.textSecondary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _dateController.text.isEmpty ? 'Tgl Panen' : _dateController.text,
+                              style: TextStyle(
+                                color: _dateController.text.isEmpty 
+                                  ? AppColors.textPlaceholder 
+                                  : AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (_dateController.text.isNotEmpty)
+                            InkWell(
+                              onTap: _clearDate,
+                              child: const Icon(LucideIcons.x, size: 16, color: AppColors.textSecondary),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+
+                // Jenis Durian Filter
                 Expanded(
-                  flex: 1,
+                  flex: 3,
                   child: Container(
+                    height: 48,
                     decoration: BoxDecoration(
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(8),
@@ -113,7 +210,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                       data: (jenisList) => DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: params.jenisDurianId,
-                          hint: const Text('Semua Jenis', style: TextStyle(color: AppColors.textPlaceholder)),
+                          hint: const Text('Jenis', style: TextStyle(color: AppColors.textPlaceholder)),
                           isExpanded: true,
                           icon: const Icon(LucideIcons.chevronDown, size: 18),
                           items: [
@@ -130,15 +227,52 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                             )),
                           ],
                           onChanged: (value) {
-                            ref.read(unsortedBuahParamsProvider.notifier).setJenisDurianId(value);
+                            ref.read(buahRawParamsProvider.notifier).setJenisDurianId(value);
                           },
                         ),
                       ),
-                      loading: () => const SizedBox(
-                        height: 48,
-                        child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                      loading: () => const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+                      error: (_, __) => const Text('Err', style: TextStyle(color: Colors.red)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Sort Status Filter
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.fieldBackground),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<bool?>(
+                        value: params.isSorted,
+                        hint: const Text('Status', style: TextStyle(color: AppColors.textPlaceholder)),
+                        isExpanded: true,
+                        icon: const Icon(LucideIcons.chevronDown, size: 18),
+                        items: const [
+                          DropdownMenuItem<bool?>(
+                            value: null,
+                            child: Text('Semua'),
+                          ),
+                          DropdownMenuItem<bool?>(
+                            value: false,
+                            child: Text('Unsorted'),
+                          ),
+                          DropdownMenuItem<bool?>(
+                            value: true,
+                            child: Text('Sorted'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          ref.read(buahRawParamsProvider.notifier).setIsSorted(value);
+                        },
                       ),
-                      error: (_, __) => const Text('Error', style: TextStyle(color: Colors.red)),
                     ),
                   ),
                 ),
@@ -172,7 +306,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                         Text('Gagal memuat data', style: TextStyle(color: Colors.red[700])),
                         const SizedBox(height: 8),
                         TextButton(
-                          onPressed: () => ref.refresh(unsortedBuahProvider),
+                          onPressed: () => ref.refresh(buahRawProvider),
                           child: const Text('Coba Lagi'),
                         ),
                       ],
@@ -211,8 +345,9 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
     }
 
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+      scrollDirection: Axis.vertical,
       child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(AppColors.fieldBackground.withOpacity(0.5)),
           dataRowMinHeight: 48,
@@ -221,25 +356,25 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
           columns: const [
             DataColumn(label: Text('No', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('Kode Buah', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Jenis Durian', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Lokasi Panen', style: TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('Jenis', style: TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('Pohon', style: TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('Tgl Panen', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Created At', style: TextStyle(fontWeight: FontWeight.bold))),
           ],
           rows: List.generate(response.data.length, (index) {
             final item = response.data[index];
-            final params = ref.read(unsortedBuahParamsProvider);
+            final params = ref.read(buahRawParamsProvider);
             final rowNum = ((params.page - 1) * params.limit) + index + 1;
             return DataRow(
               cells: [
                 DataCell(Text('$rowNum')),
                 DataCell(
                   Container(
-                    constraints: const BoxConstraints(maxWidth: 200),
+                    constraints: const BoxConstraints(maxWidth: 150),
                     child: Text(
                       item.kodeBuah,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -255,7 +390,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                       item.jenisDurian.displayName,
                       style: const TextStyle(
                         color: AppColors.blueDark,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
                     ),
@@ -263,7 +398,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                 ),
                 DataCell(
                   Container(
-                    constraints: const BoxConstraints(maxWidth: 150),
+                    constraints: const BoxConstraints(maxWidth: 120),
                     child: Text(
                       item.lokasiPanen.kodeLengkap,
                       overflow: TextOverflow.ellipsis,
@@ -271,8 +406,24 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                   ),
                 ),
                 DataCell(Text(item.pohonPanen)),
+                DataCell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: item.isSorted ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.isSorted ? 'Sorted' : 'Unsorted',
+                      style: TextStyle(
+                        color: item.isSorted ? Colors.green : Colors.orange,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
                 DataCell(Text(_formatDate(item.tglPanen))),
-                DataCell(Text(_formatDate(item.createdAt.toIso8601String()))),
               ],
             );
           }),

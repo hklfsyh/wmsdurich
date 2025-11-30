@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 
 class LotDetailPage extends ConsumerStatefulWidget {
   final String lotId;
@@ -61,6 +62,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       if (result != null) {
         ref.invalidate(lotDetailProvider(widget.lotId));
         ref.invalidate(allDraftLotsProvider);
+        ref.invalidate(warehouseDataProvider);
 
         if (mounted) {
           _showSuccessSnackbar(
@@ -256,7 +258,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${header.qtyAwal} Buah',
+                  '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} Buah',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade700,
@@ -341,8 +343,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               Expanded(
                 child: _buildInfoItem(
                   icon: LucideIcons.hash,
-                  label: 'Qty Awal',
-                  value: '${header.qtyAwal} buah',
+                  label: header.status == 'DRAFT' ? 'Qty Saat Ini' : 'Qty Awal',
+                  value: '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} buah',
                   color: AppColors.primary,
                 ),
               ),

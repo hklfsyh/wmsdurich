@@ -289,7 +289,7 @@ class LotInProcessPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${lot.qtyAwal} Buah',
+                          '${lot.status == 'DRAFT' ? lot.currentQty : lot.qtyAwal} Buah',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,

@@ -20,7 +20,8 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   
-  final Set<String> _selectedIds = {};
+  // Store full BuahRawItem objects mapped by ID to persist across pages
+  final Map<String, BuahRawItem> _selectedItems = {};
   bool _selectAll = false;
 
   @override
@@ -43,25 +44,29 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
     setState(() {
       _selectAll = value ?? false;
       if (_selectAll) {
-        _selectedIds.addAll(items.map((b) => b.id));
+        for (var item in items) {
+          _selectedItems[item.id] = item;
+        }
       } else {
-        _selectedIds.clear();
+        for (var item in items) {
+          _selectedItems.remove(item.id);
+        }
       }
     });
   }
 
-  void _toggleItemSelection(String id) {
+  void _toggleItemSelection(BuahRawItem item) {
     setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
+      if (_selectedItems.containsKey(item.id)) {
+        _selectedItems.remove(item.id);
       } else {
-        _selectedIds.add(id);
+        _selectedItems[item.id] = item;
       }
     });
   }
 
-  void _prosesToNextPage(List<BuahRawItem> allItems) {
-    final selectedBuah = allItems.where((b) => _selectedIds.contains(b.id)).toList();
+  void _prosesToNextPage() {
+    final selectedBuah = _selectedItems.values.toList();
 
     if (selectedBuah.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -244,12 +249,12 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
 
   Widget _buildContent(UnsortedBuahResponse response) {
     final items = response.data;
-    final selectedCount = _selectedIds.length;
+    final selectedCount = _selectedItems.length;
     final params = ref.watch(unsortedBuahParamsProvider);
     final jenisDurianAsync = ref.watch(jenisDurianProvider);
 
     if (items.isNotEmpty) {
-      _selectAll = items.every((b) => _selectedIds.contains(b.id));
+      _selectAll = items.every((b) => _selectedItems.containsKey(b.id));
     }
 
     return Column(
@@ -514,7 +519,7 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
               Expanded(
                 flex: 3,
                 child: ElevatedButton(
-                  onPressed: selectedCount > 0 ? () => _prosesToNextPage(items) : null,
+                  onPressed: selectedCount > 0 ? () => _prosesToNextPage() : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -553,17 +558,17 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
   }
 
   Widget _buildBuahItem(BuahRawItem buah) {
-    final isSelected = _selectedIds.contains(buah.id);
+    final isSelected = _selectedItems.containsKey(buah.id);
 
     return InkWell(
-      onTap: () => _toggleItemSelection(buah.id),
+      onTap: () => _toggleItemSelection(buah),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
             Checkbox(
               value: isSelected,
-              onChanged: (_) => _toggleItemSelection(buah.id),
+              onChanged: (_) => _toggleItemSelection(buah),
               activeColor: AppColors.primary,
             ),
             const SizedBox(width: 12),

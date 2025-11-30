@@ -94,6 +94,11 @@ class _AddBuahPageState extends ConsumerState<AddBuahPage> {
         );
       } else if (response != null) {
         _addDataFromResponse(response);
+        
+        // Refresh warehouse statistics
+        ref.invalidate(warehouseDataProvider);
+        // Refresh unsorted fruits list for add lot page
+        ref.invalidate(unsortedBuahProvider);
       }
     }
   }

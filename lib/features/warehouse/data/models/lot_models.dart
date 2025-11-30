@@ -8,6 +8,7 @@ class LotModel {
   final int qtyAwal;
   final double beratSisa;
   final int qtySisa;
+  final int currentQty;
   final String status;
   final DateTime createdAt;
 
@@ -21,6 +22,7 @@ class LotModel {
     required this.qtyAwal,
     required this.beratSisa,
     required this.qtySisa,
+    required this.currentQty,
     required this.status,
     required this.createdAt,
   });
@@ -36,6 +38,7 @@ class LotModel {
       qtyAwal: json['qty_awal'] ?? 0,
       beratSisa: (json['berat_sisa'] ?? 0).toDouble(),
       qtySisa: json['qty_sisa'] ?? 0,
+      currentQty: json['current_qty'] ?? 0,
       status: json['status'] ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
