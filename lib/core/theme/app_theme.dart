@@ -77,7 +77,7 @@ class AppTheme {
     ),
 
     // 7. Card Theme (Untuk Card View di Home/Warehouse)
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: AppColors.white,
       elevation: 4,
       shape: RoundedRectangleBorder(

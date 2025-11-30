@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/core/widgets/profile_dropdown.dart';
 import 'package:wms_durich/features/home/data/home_repository.dart';
 import 'package:wms_durich/features/home/presentation/widgets/warehouse_summary_card.dart';
 import 'package:wms_durich/features/home/presentation/widgets/sales_summary_card.dart';
@@ -12,13 +13,17 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Gunakan AsyncValue dari Riverpod untuk memantau data Dashboard
     final dashboardAsyncValue = ref.watch(dashboardDataProvider);
-
+    
     return Scaffold(
       // Tambahkan AppBar di sini
       appBar: AppBar(
         title: const Text('Warehouse Management'),
         // Hilangkan tombol back karena ini adalah root tab
         automaticallyImplyLeading: false,
+        actions: [
+          const ProfileDropdown(),
+          const SizedBox(width: 16),
+        ],
       ),
 
       // Menampilkan konten sesuai status data (Loading, Error, Data)

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
-import 'package:wms_durich/core/router/dialog_transitions.dart';
+import 'package:wms_durich/core/widgets/profile_dropdown.dart';
 import 'package:wms_durich/features/warehouse/presentation/add_buah_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_page.dart';
-import 'package:wms_durich/features/warehouse/presentation/widgets/add_pengiriman_dialog.dart';
+import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/lot_stock_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/shipment_list_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 
-class WarehousePage extends StatelessWidget {
+class WarehousePage extends ConsumerWidget {
   const WarehousePage({super.key});
 
   void _showAddBuahDialog(BuildContext context) {
@@ -25,26 +29,39 @@ class WarehousePage extends StatelessWidget {
     );
   }
 
-  void _showKirimBuahDialog(BuildContext context) {
-    DialogTransitions.showSlideUpDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.55),
-      dialog: const AddPengirimanDialog(),
+  void _showShipmentListPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ShipmentListPage()),
+    );
+  }
+
+  void _showLotStockPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LotStockPage()),
+    );
+  }
+
+  void _showListBuahPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ListBuahPage()),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Data Dummy untuk statistik
-    final int totalBuahMasukHariIni = 150; // kg
-    final int lotStockReady = 5; // lot
-    final int lotStockDikirim = 3; // lot
+  Widget build(BuildContext context, WidgetRef ref) {
+    final warehouseDataAsync = ref.watch(warehouseDataProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Warehouse Management'),
         automaticallyImplyLeading: false,
+        actions: [
+          const ProfileDropdown(),
+          const SizedBox(width: 16),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -114,52 +131,81 @@ class WarehousePage extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Item 1: Total Buah Masuk Hari Ini
-                    _buildStatCard(
-                      icon: LucideIcons.truck,
-                      iconColor: Colors.blue,
-                      iconBgColor: Colors.blue.withOpacity(0.1),
-                      title: 'Total Buah Masuk Hari Ini',
-                      value: '$totalBuahMasukHariIni kg',
-                      subtitle: 'Dari kebun ke gudang',
+                child: warehouseDataAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(LucideIcons.alertCircle, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text('Gagal memuat data', style: TextStyle(color: Colors.red[700])),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => ref.refresh(warehouseDataProvider),
+                          child: const Text('Coba Lagi'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                  data: (data) => ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // Item 1: Total Buah Masuk Hari Ini
+                      InkWell(
+                        onTap: () => _showListBuahPage(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildStatCard(
+                          icon: LucideIcons.truck,
+                          iconColor: Colors.blue,
+                          iconBgColor: Colors.blue.withOpacity(0.1),
+                          title: 'Total Buah Masuk Hari Ini',
+                          value: '${data.totalBuahRawToday} buah',
+                          subtitle: 'Data akumulasi hari ini',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
 
-                    // Item 2: Lot Stock Ready
-                    _buildStatCard(
-                      icon: LucideIcons.package,
-                      iconColor: Colors.green,
-                      iconBgColor: Colors.green.withOpacity(0.1),
-                      title: 'Lot Stock Ready',
-                      value: '$lotStockReady lot',
-                      subtitle: 'Siap untuk dikirim',
-                    ),
-                    const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () => _showLotStockPage(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildStatCard(
+                          icon: LucideIcons.package,
+                          iconColor: Colors.green,
+                          iconBgColor: Colors.green.withOpacity(0.1),
+                          title: 'Lot Stock Ready',
+                          value: '${data.totalLotReady} lot',
+                          subtitle: 'Tap untuk lihat daftar lot',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
 
-                    // Item 3: Lot Stock Dikirim
-                    _buildStatCard(
-                      icon: LucideIcons.send,
-                      iconColor: Colors.orange,
-                      iconBgColor: Colors.orange.withOpacity(0.1),
-                      title: 'Lot Stock Dikirim',
-                      value: '$lotStockDikirim lot',
-                      subtitle: 'Dalam perjalanan ke toko',
-                    ),
-                  ],
+                      // Item 3: Pengiriman
+                      InkWell(
+                        onTap: () => _showShipmentListPage(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildStatCard(
+                          icon: LucideIcons.truck,
+                          iconColor: Colors.orange,
+                          iconBgColor: Colors.orange.withOpacity(0.1),
+                          title: 'Pengiriman',
+                          value: '${data.totalLotSent} pengiriman',
+                          subtitle: 'Tap untuk kelola pengiriman',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // 3. Tombol Kirim Buah
+            // 3. Tombol Pengiriman
             ElevatedButton.icon(
-              onPressed: () => _showKirimBuahDialog(context),
-              icon: const Icon(LucideIcons.send,
+              onPressed: () => _showShipmentListPage(context),
+              icon: const Icon(LucideIcons.truck,
                   color: AppColors.white, size: 20),
-              label: const Text('Kirim Buah',
+              label: const Text('Kelola Pengiriman',
                   style: TextStyle(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,

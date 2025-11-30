@@ -1,56 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/warehouse/data/models/buah_raw_models.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/buah_raw_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 import 'package:wms_durich/shared/widgets/app_notification.dart';
+import 'package:intl/intl.dart';
 
-// Mock Data
-const List<String> dummyBlok = ['B01', 'B02', 'B03', 'B04'];
-const List<String> dummyJenis = ['MK', 'BT', 'F0001', 'F0002'];
-
-class BuahItem {
-  final String id;
-  final String blok;
-  final String jenis;
-  final DateTime timestamp;
-  final String keranjangId;
-
-  BuahItem({
-    required this.id,
-    required this.blok,
-    required this.jenis,
-    required this.timestamp,
-    required this.keranjangId,
-  });
-}
-
-class AddBuahPage extends StatefulWidget {
+class AddBuahPage extends ConsumerStatefulWidget {
   const AddBuahPage({super.key});
 
   @override
-  State<AddBuahPage> createState() => _AddBuahPageState();
+  ConsumerState<AddBuahPage> createState() => _AddBuahPageState();
 }
 
-class _AddBuahPageState extends State<AddBuahPage> {
-  String? _selectedBlok;
-  String? _selectedJenis;
+class _AddBuahPageState extends ConsumerState<AddBuahPage> {
+  // Selected IDs (Value for Logic)
+  String? _selectedPohonId;
+  String? _selectedJenisId;
+
   final TextEditingController _quantityController =
       TextEditingController(text: '1');
 
   // Error states
-  String? _blokError;
+  String? _pohonError;
   String? _jenisError;
   String? _quantityError;
 
   // Data list (max 10 items displayed)
-  final List<BuahItem> _dataList = [];
-
-  // Counter untuk ID
-  int _idCounter = 1;
-
-  // Keranjang tracking
-  String _currentKeranjangId = 'KERANJANG-A';
-  String? _lastJenis;
+  final List<BuahRawItem> _dataList = [];
 
   @override
   void dispose() {
@@ -74,55 +54,63 @@ class _AddBuahPageState extends State<AddBuahPage> {
     }
   }
 
-  void _validateAndAddData() {
+  Future<void> _validateAndAddData() async {
     setState(() {
-      _blokError = _selectedBlok == null ? 'Pilih Blok' : null;
-      _jenisError = _selectedJenis == null ? 'Pilih Jenis' : null;
+      _pohonError = _selectedPohonId == null ? 'Pilih Blok' : null;
+      _jenisError = _selectedJenisId == null ? 'Pilih Jenis' : null;
 
       final qty = int.tryParse(_quantityController.text);
       _quantityError =
           (qty == null || qty < 1) ? 'Quantity harus minimal 1' : null;
     });
 
-    if (_blokError == null && _jenisError == null && _quantityError == null) {
-      _addData();
+    if (_pohonError == null && _jenisError == null && _quantityError == null) {
+      // Prepare request
+      final quantity = int.parse(_quantityController.text);
+      final request = BuahRawBulkRequest(
+        tglPanen: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        items: [
+          BuahRawBulkItem(
+            jenisDurianId: _selectedJenisId!,
+            pohonPanenId: _selectedPohonId!,
+            jumlah: quantity,
+          ),
+        ],
+      );
+
+      // Call API
+      final response = await ref
+          .read(createBulkBuahRawControllerProvider.notifier)
+          .createBulk(request);
+
+      // Handle Result
+      final state = ref.read(createBulkBuahRawControllerProvider);
+      
+      if (state.hasError) {
+         AppNotification.show(
+          context,
+          message: 'Gagal menyimpan data: ${state.error}',
+          type: NotificationType.error,
+        );
+      } else if (response != null) {
+        _addDataFromResponse(response);
+        
+        // Refresh warehouse statistics
+        ref.invalidate(warehouseDataProvider);
+        // Refresh unsorted fruits list for add lot page
+        ref.invalidate(unsortedBuahProvider);
+      }
     }
   }
 
-  void _addData() {
-    final quantity = int.tryParse(_quantityController.text) ?? 1;
-
-    // Cek apakah jenis berubah, jika ya buat keranjang baru
-    if (_lastJenis != null && _lastJenis != _selectedJenis) {
-      // Increment keranjang ID
-      String lastChar = _currentKeranjangId.split('-').last;
-      String nextChar = String.fromCharCode(lastChar.codeUnitAt(0) + 1);
-      _currentKeranjangId = 'KERANJANG-$nextChar';
-    }
-
+  void _addDataFromResponse(BuahRawBulkResponse response) {
     setState(() {
-      // Tambahkan data sejumlah quantity
-      for (int i = 0; i < quantity; i++) {
-        String newId =
-            '${_selectedBlok}0000-${_selectedJenis}00${_idCounter.toString().padLeft(2, '0')}';
-
-        _dataList.insert(
-            0,
-            BuahItem(
-              id: newId,
-              blok: _selectedBlok!,
-              jenis: _selectedJenis!,
-              timestamp: DateTime.now(),
-              keranjangId: _currentKeranjangId,
-            ));
-
-        _idCounter++;
+      // Add items from response to the list
+      for (var item in response.items) {
+        _dataList.insert(0, item);
       }
 
-      // Simpan jenis terakhir
-      _lastJenis = _selectedJenis;
-
-      // Batasi tampilan hanya 10 item terbaru
+      // Limit display to 10 most recent items
       if (_dataList.length > 10) {
         _dataList.removeRange(10, _dataList.length);
       }
@@ -130,13 +118,18 @@ class _AddBuahPageState extends State<AddBuahPage> {
 
     AppNotification.show(
       context,
-      message: '$quantity data berhasil ditambahkan ke $_currentKeranjangId',
+      message: '${response.totalInserted} data berhasil ditambahkan',
       type: NotificationType.success,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final pohonAsync = ref.watch(pohonProvider);
+    final jenisAsync = ref.watch(jenisDurianProvider);
+    final createResult = ref.watch(createBulkBuahRawControllerProvider);
+    final isLoading = createResult.isLoading;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Buah'),
@@ -150,39 +143,53 @@ class _AddBuahPageState extends State<AddBuahPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Dropdown Blok
+            // Dropdown Blok (Real Data - using Pohon)
             const Text('Blok',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 8),
-            _buildDropdown(
-              hint: 'Pilih Blok',
-              value: _selectedBlok,
-              items: dummyBlok,
-              onChanged: (value) {
-                setState(() {
-                  _selectedBlok = value;
-                  _blokError = null;
-                });
-              },
-              error: _blokError,
+            pohonAsync.when(
+              data: (pohonList) => _buildDropdown(
+                hint: 'Pilih Blok',
+                value: _selectedPohonId,
+                items: pohonList.map((p) => DropdownMenuItem(
+                  value: p.id,
+                  child: Text(p.kodeLengkap),
+                )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedPohonId = value;
+                    _pohonError = null;
+                  });
+                },
+                error: _pohonError,
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (err, stack) => Text('Error loading pohon: $err', style: const TextStyle(color: Colors.red)),
             ),
             const SizedBox(height: 16),
 
-            // Dropdown Jenis
+            // Dropdown Jenis (Real Data)
             const Text('Jenis',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 8),
-            _buildDropdown(
-              hint: 'Pilih Jenis',
-              value: _selectedJenis,
-              items: dummyJenis,
-              onChanged: (value) {
-                setState(() {
-                  _selectedJenis = value;
-                  _jenisError = null;
-                });
-              },
-              error: _jenisError,
+            jenisAsync.when(
+              data: (jenisList) => _buildDropdown(
+                hint: 'Pilih Jenis',
+                value: _selectedJenisId,
+                items: jenisList.map((j) => DropdownMenuItem(
+                  value: j.id,
+                  child: Text(j.displayName),
+                )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedJenisId = value;
+                    _jenisError = null;
+                  });
+                },
+                error: _jenisError,
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (err, stack) => Text('Error loading jenis: $err', style: const TextStyle(color: Colors.red)),
             ),
             const SizedBox(height: 16),
 
@@ -293,38 +300,20 @@ class _AddBuahPageState extends State<AddBuahPage> {
             ),
             const SizedBox(height: 16),
 
-            // Info Keranjang
-            if (_lastJenis != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.info, color: Colors.blue, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Data saat ini masuk ke: $_currentKeranjangId\nJenis terakhir: $_lastJenis',
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.blue),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
-
             // Button Catat
             ElevatedButton.icon(
-              onPressed: _validateAndAddData,
-              icon: const Icon(LucideIcons.save,
-                  color: AppColors.white, size: 20),
-              label: const Text('Catat',
-                  style: TextStyle(
+              onPressed: isLoading ? null : _validateAndAddData,
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: AppColors.white, strokeWidth: 2),
+                    )
+                  : const Icon(LucideIcons.save,
+                      color: AppColors.white, size: 20),
+              label: Text(isLoading ? 'Menyimpan...' : 'Catat',
+                  style: const TextStyle(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
@@ -345,7 +334,7 @@ class _AddBuahPageState extends State<AddBuahPage> {
   Widget _buildDropdown({
     required String hint,
     String? value,
-    required List<String> items,
+    required List<DropdownMenuItem<String>> items,
     required Function(String?) onChanged,
     String? error,
   }) {
@@ -368,12 +357,7 @@ class _AddBuahPageState extends State<AddBuahPage> {
               icon: const Icon(LucideIcons.chevronDown, size: 20),
               hint: Text(hint),
               onChanged: onChanged,
-              items: items.map((String val) {
-                return DropdownMenuItem<String>(
-                  value: val,
-                  child: Text(val),
-                );
-              }).toList(),
+              items: items,
             ),
           ),
         ),
@@ -392,7 +376,7 @@ class _AddBuahPageState extends State<AddBuahPage> {
     );
   }
 
-  Widget _buildListItem(BuahItem item) {
+  Widget _buildListItem(BuahRawItem item) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -414,7 +398,7 @@ class _AddBuahPageState extends State<AddBuahPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.id,
+                  item.kodeBuah,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -423,30 +407,21 @@ class _AddBuahPageState extends State<AddBuahPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Blok: ${item.blok} | Jenis: ${item.jenis}',
+                  'Jenis: ${item.jenisDurian.displayName}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Lokasi: ${item.lokasiPanen.kodeLengkap}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
                 ),
               ],
-            ),
-          ),
-          // Keranjang Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.blue.withOpacity(0.3)),
-            ),
-            child: Text(
-              item.keranjangId.split('-').last,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
             ),
           ),
         ],

@@ -8,7 +8,9 @@ import 'package:wms_durich/features/auth/presentation/login_page.dart';
 import 'package:wms_durich/features/home/presentation/home_shell.dart';
 import 'package:wms_durich/features/home/presentation/dashboard_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/warehouse_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
 import 'package:wms_durich/features/sales/presentation/sales_page.dart';
+import 'package:wms_durich/features/settings/presentation/pages/settings_page.dart';
 
 CustomTransitionPage buildPageWithDefaultTransition<T>({
   required BuildContext context,
@@ -52,6 +54,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const LoginPage(),
         ),
       ),
+      GoRoute(
+        path: '/settings',
+        pageBuilder: (context, state) => buildPageWithDefaultTransition(
+          context: context,
+          state: state,
+          child: const SettingsPage(),
+        ),
+      ),
       ShellRoute(
         pageBuilder: (context, state, child) => buildPageWithDefaultTransition(
           context: context,
@@ -66,6 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/warehouse',
             builder: (context, state) => const WarehousePage(),
+          ),
+          GoRoute(
+            path: '/home/warehouse/list-buah',
+            builder: (context, state) => const ListBuahPage(),
           ),
           GoRoute(
             path: '/home/sales',

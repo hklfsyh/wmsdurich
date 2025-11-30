@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wms_durich/core/widgets/profile_dropdown.dart';
 
 class SalesPage extends StatelessWidget {
   const SalesPage({super.key});
@@ -9,6 +10,10 @@ class SalesPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Warehouse Management'),
         automaticallyImplyLeading: false,
+        actions: [
+          const ProfileDropdown(),
+          const SizedBox(width: 16),
+        ],
       ),
       body: const Center(
         child: Text(
