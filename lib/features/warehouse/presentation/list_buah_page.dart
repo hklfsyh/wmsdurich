@@ -19,6 +19,7 @@ class ListBuahPage extends ConsumerStatefulWidget {
 class _ListBuahPageState extends ConsumerState<ListBuahPage> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
+  final ScrollController _horizontalScrollController = ScrollController();
   Timer? _debounce;
 
   @override
@@ -36,6 +37,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
   void dispose() {
     _searchController.dispose();
     _dateController.dispose();
+    _horizontalScrollController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
@@ -152,52 +154,48 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
             ),
             const SizedBox(height: 12),
 
-            // Filters Row
-            Row(
-              children: [
-                // Date Filter
-                Expanded(
-                  flex: 3,
-                  child: InkWell(
-                    onTap: () => _selectDate(context),
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.fieldBackground),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          const Icon(LucideIcons.calendar, size: 18, color: AppColors.textSecondary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _dateController.text.isEmpty ? 'Tgl Panen' : _dateController.text,
-                              style: TextStyle(
-                                color: _dateController.text.isEmpty 
-                                  ? AppColors.textPlaceholder 
-                                  : AppColors.textPrimary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (_dateController.text.isNotEmpty)
-                            InkWell(
-                              onTap: _clearDate,
-                              child: const Icon(LucideIcons.x, size: 16, color: AppColors.textSecondary),
-                            ),
-                        ],
+            // Date Filter (Full width)
+            InkWell(
+              onTap: () => _selectDate(context),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.fieldBackground),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.calendar, size: 18, color: AppColors.textSecondary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _dateController.text.isEmpty ? 'Pilih Tanggal Panen' : _dateController.text,
+                        style: TextStyle(
+                          color: _dateController.text.isEmpty 
+                            ? AppColors.textPlaceholder 
+                            : AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
+                    if (_dateController.text.isNotEmpty)
+                      InkWell(
+                        onTap: _clearDate,
+                        child: const Icon(LucideIcons.x, size: 16, color: AppColors.textSecondary),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 8),
+              ),
+            ),
+            const SizedBox(height: 8),
 
+            // Jenis & Status Filters Row
+            Row(
+              children: [
                 // Jenis Durian Filter
                 Expanded(
-                  flex: 3,
                   child: Container(
                     height: 48,
                     decoration: BoxDecoration(
@@ -210,7 +208,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                       data: (jenisList) => DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: params.jenisDurianId,
-                          hint: const Text('Jenis', style: TextStyle(color: AppColors.textPlaceholder)),
+                          hint: const Text('Jenis Durian', style: TextStyle(color: AppColors.textPlaceholder)),
                           isExpanded: true,
                           icon: const Icon(LucideIcons.chevronDown, size: 18),
                           items: [
@@ -240,7 +238,6 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
 
                 // Sort Status Filter
                 Expanded(
-                  flex: 2,
                   child: Container(
                     height: 48,
                     decoration: BoxDecoration(
@@ -258,7 +255,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                         items: const [
                           DropdownMenuItem<bool?>(
                             value: null,
-                            child: Text('Semua'),
+                            child: Text('Semua Status'),
                           ),
                           DropdownMenuItem<bool?>(
                             value: false,
@@ -295,24 +292,27 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                     ),
                   ],
                 ),
-                child: buahAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(LucideIcons.alertCircle, color: Colors.red, size: 48),
-                        const SizedBox(height: 16),
-                        Text('Gagal memuat data', style: TextStyle(color: Colors.red[700])),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () => ref.refresh(buahRawProvider),
-                          child: const Text('Coba Lagi'),
-                        ),
-                      ],
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: buahAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, stack) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(LucideIcons.alertCircle, color: Colors.red, size: 48),
+                          const SizedBox(height: 16),
+                          Text('Gagal memuat data', style: TextStyle(color: Colors.red[700])),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => ref.refresh(buahRawProvider),
+                            child: const Text('Coba Lagi'),
+                          ),
+                        ],
+                      ),
                     ),
+                    data: (response) => _buildDataTable(response),
                   ),
-                  data: (response) => _buildDataTable(response),
                 ),
               ),
             ),
@@ -346,23 +346,28 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(AppColors.fieldBackground.withOpacity(0.5)),
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: 60,
-          columnSpacing: 24,
-          columns: const [
-            DataColumn(label: Text('No', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Kode Buah', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Jenis', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Pohon', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Tgl Panen', style: TextStyle(fontWeight: FontWeight.bold))),
-          ],
-          rows: List.generate(response.data.length, (index) {
+      child: Scrollbar(
+        controller: _horizontalScrollController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        child: SingleChildScrollView(
+          controller: _horizontalScrollController,
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(AppColors.fieldBackground.withOpacity(0.5)),
+            dataRowMinHeight: 48,
+            dataRowMaxHeight: 60,
+            columnSpacing: 24,
+            columns: const [
+              DataColumn(label: Text('No', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Kode Buah', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Jenis', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Pohon', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Tgl Panen', style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+            rows: List.generate(response.data.length, (index) {
             final item = response.data[index];
             final params = ref.read(buahRawParamsProvider);
             final rowNum = ((params.page - 1) * params.limit) + index + 1;
@@ -427,6 +432,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
               ],
             );
           }),
+          ),
         ),
       ),
     );
@@ -434,29 +440,33 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
 
   Widget _buildPagination(PaginationMeta meta, int currentPage) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.fieldBackground),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Info
           Text(
-            'Halaman $currentPage dari ${meta.totalPage} (${meta.totalData} data)',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            'Hal $currentPage / ${meta.totalPage} (${meta.totalData} data)',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
+          const SizedBox(height: 8),
           
           // Pagination Buttons
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Previous Button
               IconButton(
                 onPressed: currentPage > 1 ? () => _goToPage(currentPage - 1) : null,
-                icon: const Icon(LucideIcons.chevronLeft),
+                icon: const Icon(LucideIcons.chevronLeft, size: 20),
                 color: currentPage > 1 ? AppColors.black : AppColors.textPlaceholder,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
               
               // Page Numbers
@@ -466,8 +476,8 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                   final page = _getVisiblePages(currentPage, meta.totalPage)[index];
                   if (page == -1) {
                     return const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Text('...', style: TextStyle(color: AppColors.textSecondary)),
+                      padding: EdgeInsets.symmetric(horizontal: 2),
+                      child: Text('..', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                     );
                   }
                   return Padding(
@@ -476,8 +486,8 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                       onTap: page != currentPage ? () => _goToPage(page) : null,
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 28,
+                        height: 28,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: page == currentPage ? AppColors.black : Colors.transparent,
@@ -488,6 +498,7 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                           style: TextStyle(
                             color: page == currentPage ? AppColors.white : AppColors.textPrimary,
                             fontWeight: page == currentPage ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -499,8 +510,10 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
               // Next Button
               IconButton(
                 onPressed: currentPage < meta.totalPage ? () => _goToPage(currentPage + 1) : null,
-                icon: const Icon(LucideIcons.chevronRight),
+                icon: const Icon(LucideIcons.chevronRight, size: 20),
                 color: currentPage < meta.totalPage ? AppColors.black : AppColors.textPlaceholder,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               ),
             ],
           ),

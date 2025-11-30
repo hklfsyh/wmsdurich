@@ -224,6 +224,19 @@ class _AddLotStockPageState extends ConsumerState<AddLotStockPage> {
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              ref.invalidate(unsortedBuahProvider);
+              setState(() {
+                _selectedItems.clear();
+                _selectAll = false;
+              });
+            },
+            icon: const Icon(LucideIcons.refreshCw),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: buahAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
