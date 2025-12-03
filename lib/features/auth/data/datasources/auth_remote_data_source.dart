@@ -2,9 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/auth/data/models/auth_response_model.dart';
+import 'package:wms_durich/features/auth/data/datasources/auth_mock_data_source.dart';
 
+// USING MOCK DATA - API is down
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthRemoteDataSourceImpl(ref.read(dioProvider));
+  return AuthMockDataSourceImpl();
+  // return AuthRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
 });
 
 abstract class AuthRemoteDataSource {
@@ -36,32 +39,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on DioException catch (e) {
       // Handle Dio Error Response based on GoLang struct
       // { "success": false, "message": "...", "code": ... }
-      
+
       String errorMessage = 'Connection error';
-      
+
       if (e.response != null && e.response?.data != null) {
         final data = e.response?.data;
-        
+
         // If response is a Map, try to extract 'message'
         if (data is Map<String, dynamic>) {
-            if (data['message'] != null) {
-                errorMessage = data['message'].toString();
-            }
+          if (data['message'] != null) {
+            errorMessage = data['message'].toString();
+          }
         } else if (data is String) {
-            // Sometimes raw string response
-            errorMessage = data;
+          // Sometimes raw string response
+          errorMessage = data;
         }
       }
-      
+
       throw Exception(errorMessage);
     } catch (e) {
-       throw Exception('Data parsing error: $e');
+      throw Exception('Data parsing error: $e');
     }
   }
 
   @override
   Future<void> logout(String refreshToken) async {
-     try {
+    try {
       await _dio.post(
         '/v1/authentications/logout',
         data: {
@@ -70,7 +73,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
     } on DioException catch (e) {
       // Ignore logout errors usually, or log them
-       throw Exception(e.response?.data['message'] ?? 'Logout failed');
+      throw Exception(e.response?.data['message'] ?? 'Logout failed');
     }
   }
 }

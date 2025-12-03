@@ -56,7 +56,28 @@ class WarehousePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Warehouse Management'),
+        title: Row(
+          children: [
+            const Text('Warehouse Management'),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.orange.shade300, width: 0.5),
+              ),
+              child: Text(
+                'DEMO',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade900,
+                ),
+              ),
+            ),
+          ],
+        ),
         automaticallyImplyLeading: false,
         actions: [
           const ProfileDropdown(),
@@ -132,14 +153,17 @@ class WarehousePage extends ConsumerWidget {
                   ],
                 ),
                 child: warehouseDataAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (error, stack) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(LucideIcons.alertCircle, color: Colors.red, size: 48),
+                        const Icon(LucideIcons.alertCircle,
+                            color: Colors.red, size: 48),
                         const SizedBox(height: 16),
-                        Text('Gagal memuat data', style: TextStyle(color: Colors.red[700])),
+                        Text('Gagal memuat data',
+                            style: TextStyle(color: Colors.red[700])),
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: () => ref.refresh(warehouseDataProvider),

@@ -2,9 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/master_data_models.dart';
+import 'package:wms_durich/features/warehouse/data/datasources/master_data_mock_data_source.dart';
 
-final masterDataRemoteDataSourceProvider = Provider<MasterDataRemoteDataSource>((ref) {
-  return MasterDataRemoteDataSourceImpl(ref.read(dioProvider));
+// USING MOCK DATA - API is down
+final masterDataRemoteDataSourceProvider =
+    Provider<MasterDataRemoteDataSource>((ref) {
+  return MasterDataMockDataSourceImpl();
+  // return MasterDataRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
 });
 
 abstract class MasterDataRemoteDataSource {

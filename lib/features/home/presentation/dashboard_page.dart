@@ -13,11 +13,32 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Gunakan AsyncValue dari Riverpod untuk memantau data Dashboard
     final dashboardAsyncValue = ref.watch(dashboardDataProvider);
-    
+
     return Scaffold(
       // Tambahkan AppBar di sini
       appBar: AppBar(
-        title: const Text('Warehouse Management'),
+        title: Row(
+          children: [
+            const Text('Warehouse Management'),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.orange.shade300, width: 0.5),
+              ),
+              child: Text(
+                'DEMO',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade900,
+                ),
+              ),
+            ),
+          ],
+        ),
         // Hilangkan tombol back karena ini adalah root tab
         automaticallyImplyLeading: false,
         actions: [

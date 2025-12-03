@@ -75,6 +75,37 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             children: [
               const SizedBox(height: 30),
 
+              // Mock Data Banner
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: Colors.orange.shade700, size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Mode Demo - Gunakan email & password apapun',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
               // 1. Logo Aplikasi
               Image.asset(
                 AssetPaths.durichLogo,
@@ -126,7 +157,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               },
                             ),
                             const SizedBox(height: 20),
-
                             const Text('Password',
                                 style: TextStyle(fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
@@ -164,7 +194,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: authState.isLoading ? null : _handleLogin,
+                            onPressed:
+                                authState.isLoading ? null : _handleLogin,
                             child: authState.isLoading
                                 ? const SizedBox(
                                     height: 20,

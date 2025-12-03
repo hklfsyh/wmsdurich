@@ -2,17 +2,23 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
+import 'package:wms_durich/features/warehouse/data/datasources/lot_mock_data_source.dart';
 
+// USING MOCK DATA - API is down
 final lotRemoteDataSourceProvider = Provider<LotRemoteDataSource>((ref) {
-  return LotRemoteDataSourceImpl(ref.read(dioProvider));
+  return LotMockDataSourceImpl();
+  // return LotRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
 });
 
 abstract class LotRemoteDataSource {
-  Future<LotsResponse> getLots({String? status, String? jenisDurianId, String? kondisi});
+  Future<LotsResponse> getLots(
+      {String? status, String? jenisDurianId, String? kondisi});
   Future<LotDetailResponse> getLotDetail(String lotId);
   Future<CreateLotResponse> createLot(CreateLotRequest request);
-  Future<AddItemsToLotResponse> addItemsToLot(String lotId, AddItemsToLotRequest request);
-  Future<FinalizeLotResponse> finalizeLot(String lotId, FinalizeLotRequest request);
+  Future<AddItemsToLotResponse> addItemsToLot(
+      String lotId, AddItemsToLotRequest request);
+  Future<FinalizeLotResponse> finalizeLot(
+      String lotId, FinalizeLotRequest request);
 }
 
 class LotRemoteDataSourceImpl implements LotRemoteDataSource {
@@ -21,7 +27,8 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
   LotRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<LotsResponse> getLots({String? status, String? jenisDurianId, String? kondisi}) async {
+  Future<LotsResponse> getLots(
+      {String? status, String? jenisDurianId, String? kondisi}) async {
     try {
       final queryParams = <String, dynamic>{};
       if (status != null && status.isNotEmpty) {
@@ -61,9 +68,11 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
   }
 
   @override
-  Future<AddItemsToLotResponse> addItemsToLot(String lotId, AddItemsToLotRequest request) async {
+  Future<AddItemsToLotResponse> addItemsToLot(
+      String lotId, AddItemsToLotRequest request) async {
     try {
-      final response = await _dio.post('/v1/lots/$lotId/items', data: request.toJson());
+      final response =
+          await _dio.post('/v1/lots/$lotId/items', data: request.toJson());
       return AddItemsToLotResponse.fromJson(response.data['data']);
     } catch (e) {
       rethrow;
@@ -71,9 +80,11 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
   }
 
   @override
-  Future<FinalizeLotResponse> finalizeLot(String lotId, FinalizeLotRequest request) async {
+  Future<FinalizeLotResponse> finalizeLot(
+      String lotId, FinalizeLotRequest request) async {
     try {
-      final response = await _dio.post('/v1/lots/$lotId/finalize', data: request.toJson());
+      final response =
+          await _dio.post('/v1/lots/$lotId/finalize', data: request.toJson());
       return FinalizeLotResponse.fromJson(response.data['data']);
     } catch (e) {
       rethrow;

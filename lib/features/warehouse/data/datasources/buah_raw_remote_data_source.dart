@@ -2,9 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/buah_raw_models.dart';
+import 'package:wms_durich/features/warehouse/data/datasources/buah_raw_mock_data_source.dart';
 
-final buahRawRemoteDataSourceProvider = Provider<BuahRawRemoteDataSource>((ref) {
-  return BuahRawRemoteDataSourceImpl(ref.read(dioProvider));
+// USING MOCK DATA - API is down
+final buahRawRemoteDataSourceProvider =
+    Provider<BuahRawRemoteDataSource>((ref) {
+  return BuahRawMockDataSourceImpl();
+  // return BuahRawRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
 });
 
 abstract class BuahRawRemoteDataSource {
@@ -15,7 +19,7 @@ abstract class BuahRawRemoteDataSource {
     String? kodeBuah,
     String? jenisDurianId,
   });
-  
+
   Future<UnsortedBuahResponse> getBuahRaw({
     int page = 1,
     int limit = 50,
@@ -32,7 +36,8 @@ class BuahRawRemoteDataSourceImpl implements BuahRawRemoteDataSource {
   BuahRawRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<BuahRawBulkResponse> createBulkBuahRaw(BuahRawBulkRequest request) async {
+  Future<BuahRawBulkResponse> createBulkBuahRaw(
+      BuahRawBulkRequest request) async {
     try {
       final response = await _dio.post(
         '/v1/buah-raw/bulk',
@@ -98,7 +103,7 @@ class BuahRawRemoteDataSourceImpl implements BuahRawRemoteDataSource {
       if (isSorted != null) {
         queryParams['is_sorted'] = isSorted.toString();
       }
-      
+
       final response = await _dio.get(
         '/v1/buah-raw',
         queryParameters: queryParams,

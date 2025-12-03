@@ -2,9 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/settings/data/models/password_request_models.dart';
+import 'package:wms_durich/features/settings/data/datasources/settings_mock_data_source.dart';
 
-final settingsRemoteDataSourceProvider = Provider<SettingsRemoteDataSource>((ref) {
-  return SettingsRemoteDataSourceImpl(ref.read(dioProvider));
+// USING MOCK DATA - API is down
+final settingsRemoteDataSourceProvider =
+    Provider<SettingsRemoteDataSource>((ref) {
+  return SettingsMockDataSourceImpl();
+  // return SettingsRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
 });
 
 abstract class SettingsRemoteDataSource {
