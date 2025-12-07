@@ -54,7 +54,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     });
 
     try {
-      final request = FinalizeLotRequest(beratAwal: berat);
+      final request = FinalizeLotRequest();
       final result = await ref
           .read(finalizeLotControllerProvider.notifier)
           .finalize(widget.lotId, request);
@@ -516,6 +516,23 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Text(
+                        item.jenisDurian,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Icon(LucideIcons.mapPin,
                         size: 12, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
@@ -526,7 +543,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Icon(LucideIcons.calendar,
                         size: 12, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
@@ -535,6 +552,22 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(LucideIcons.scale,
+                        size: 12, color: Colors.green.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${item.berat.toStringAsFixed(1)} kg',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade700,
                       ),
                     ),
                   ],

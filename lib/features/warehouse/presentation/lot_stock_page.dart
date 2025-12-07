@@ -6,12 +6,33 @@ import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_detail_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 
-class LotStockPage extends ConsumerWidget {
+class LotStockPage extends ConsumerStatefulWidget {
   const LotStockPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LotStockPage> createState() => _LotStockPageState();
+}
+
+class _LotStockPageState extends ConsumerState<LotStockPage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final readyLotsAsync = ref.watch(allReadyLotsProvider);
+    final emptyLotsAsync = ref.watch(allEmptyLotsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -20,58 +41,106 @@ class LotStockPage extends ConsumerWidget {
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
         ),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.primary,
+          labelColor: AppColors.primary,
+          unselectedLabelColor: AppColors.textSecondary,
+          tabs: [
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(LucideIcons.packageCheck, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Ready (${readyLotsAsync.value?.data.length ?? 0})'),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(LucideIcons.packageX, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Empty (${emptyLotsAsync.value?.data.length ?? 0})'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
+          _buildLotList(
+              readyLotsAsync, allReadyLotsProvider, AppColors.statusSuccessDark,
+              isReady: true),
+          _buildLotList(emptyLotsAsync, allEmptyLotsProvider, Colors.grey,
+              isReady: false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLotList(
+      AsyncValue<LotsResponse> asyncValue,
+      FutureProvider<LotsResponse> provider,
+      Color themeColor, {
+        required bool isReady,
+      }) {
+    return Column(
+      children: [
+        if (isReady)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.statusSuccessLight,
+              color: themeColor.withOpacity(0.1),
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade300),
               ),
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.packageCheck,
-                    color: AppColors.statusSuccessDark, size: 28),
+                Icon(isReady ? LucideIcons.packageCheck : LucideIcons.packageX,
+                    color: themeColor, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Lot Siap Kirim',
-                        style: TextStyle(
+                      Text(
+                        isReady ? 'Lot Siap Kirim' : 'Lot Kosong',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      readyLotsAsync.when(
+                      asyncValue.when(
                         data: (response) => Text(
                           '${response.data.length} Lot',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.statusSuccessDark,
+                            color: themeColor,
                           ),
                         ),
-                        loading: () => const Text(
+                        loading: () => Text(
                           '... Lot',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.statusSuccessDark,
+                            color: themeColor,
                           ),
                         ),
-                        error: (_, __) => const Text(
+                        error: (_, __) => Text(
                           '0 Lot',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.statusSuccessDark,
+                            color: themeColor,
                           ),
                         ),
                       ),
@@ -79,59 +148,58 @@ class LotStockPage extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => ref.invalidate(allReadyLotsProvider),
+                  onPressed: () => ref.invalidate(provider),
                   icon: const Icon(LucideIcons.refreshCw),
-                  color: AppColors.statusSuccessDark,
+                  color: themeColor,
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: readyLotsAsync.when(
-              data: (response) {
-                if (response.data.isEmpty) {
-                  return _buildEmptyState();
-                }
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(allReadyLotsProvider);
+        Expanded(
+          child: asyncValue.when(
+            data: (response) {
+              if (response.data.isEmpty) {
+                return _buildEmptyState(isReady);
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(provider);
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: response.data.length,
+                  separatorBuilder: (context, index) =>
+                  const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final lot = response.data[index];
+                    return _buildLotCard(context, lot, isReady);
                   },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: response.data.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final lot = response.data[index];
-                      return _buildLotCard(context, lot);
-                    },
-                  ),
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stack) => _buildErrorState(error, ref),
+                ),
+              );
+            },
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
             ),
+            error: (error, stack) => _buildErrorState(error, ref, provider),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isReady) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            LucideIcons.packageX,
+            isReady ? LucideIcons.packageOpen : LucideIcons.packageX,
             size: 64,
             color: Colors.grey.shade400,
           ),
           const SizedBox(height: 16),
           Text(
-            'Tidak ada Lot Ready',
+            isReady ? 'Tidak ada Lot Ready' : 'Tidak ada Lot Kosong',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -140,7 +208,9 @@ class LotStockPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Lot yang sudah difinalisasi akan tampil di sini',
+            isReady
+                ? 'Lot yang sudah difinalisasi akan tampil di sini'
+                : 'Lot yang sudah habis terjual akan tampil di sini',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -151,12 +221,13 @@ class LotStockPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(Object error, WidgetRef ref) {
+  Widget _buildErrorState(
+      Object error, WidgetRef ref, FutureProvider<LotsResponse> provider) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             LucideIcons.alertCircle,
             size: 64,
             color: AppColors.statusDangerDark,
@@ -181,7 +252,7 @@ class LotStockPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => ref.invalidate(allReadyLotsProvider),
+            onPressed: () => ref.invalidate(provider),
             icon: const Icon(LucideIcons.refreshCw, size: 18),
             label: const Text('Coba Lagi'),
             style: ElevatedButton.styleFrom(
@@ -194,7 +265,10 @@ class LotStockPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildLotCard(BuildContext context, LotModel lot) {
+  Widget _buildLotCard(BuildContext context, LotModel lot, bool isReady) {
+    final statusColor = isReady ? AppColors.statusSuccessDark : Colors.grey;
+    final bgColor = isReady ? AppColors.statusSuccessLight : Colors.grey.shade100;
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -208,7 +282,7 @@ class LotStockPage extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.statusSuccessDark.withOpacity(0.3)),
+          border: Border.all(color: statusColor.withOpacity(0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -223,15 +297,15 @@ class LotStockPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.statusSuccessLight,
+                color: bgColor,
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
+                const BorderRadius.vertical(top: Radius.circular(12)),
               ),
               child: Row(
                 children: [
                   Icon(
-                    LucideIcons.packageCheck,
-                    color: AppColors.statusSuccessDark,
+                    isReady ? LucideIcons.packageCheck : LucideIcons.packageX,
+                    color: statusColor,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -261,14 +335,14 @@ class LotStockPage extends ConsumerWidget {
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.statusSuccessDark,
+                      color: statusColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text(
-                      'READY',
-                      style: TextStyle(
+                    child: Text(
+                      isReady ? 'READY' : 'EMPTY',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -305,26 +379,26 @@ class LotStockPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.statusSuccessLight.withOpacity(0.5),
+                color: bgColor.withOpacity(0.5),
                 borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(12)),
+                const BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.eye, size: 16, color: AppColors.statusSuccessDark),
+                  Icon(LucideIcons.eye, size: 16, color: statusColor),
                   const SizedBox(width: 8),
                   Text(
                     'Lihat Detail',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.statusSuccessDark,
+                      color: statusColor,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Icon(LucideIcons.chevronRight,
-                      size: 16, color: AppColors.statusSuccessDark),
+                      size: 16, color: statusColor),
                 ],
               ),
             ),

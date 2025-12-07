@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:wms_durich/features/auth/presentation/splash_screen.dart';
 import 'package:wms_durich/features/auth/presentation/login_page.dart';
+import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
 
 import 'package:wms_durich/features/home/presentation/home_shell.dart';
 import 'package:wms_durich/features/home/presentation/dashboard_page.dart';
@@ -37,6 +38,43 @@ CustomTransitionPage buildPageWithDefaultTransition<T>({
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final user = authState.user;
+      final path = state.fullPath ?? '';
+
+      // Jangan redirect di splash dan login
+      if (path == '/splash' || path == '/login') {
+        return null;
+      }
+
+      // Jika belum login, redirect ke login
+      if (user == null) {
+        return '/login';
+      }
+
+      // Role-based access control
+      final isAdmin = user.isAdmin;
+      final isWarehouse = user.isWarehouse;
+      final isSales = user.isSales;
+
+      // Admin bisa akses semua page
+      if (isAdmin) {
+        return null;
+      }
+
+      // Warehouse hanya bisa akses /home/warehouse
+      if (isWarehouse && !path.startsWith('/home/warehouse') && path != '/settings') {
+        return '/home/warehouse';
+      }
+
+      // Sales hanya bisa akses /home/sales
+      if (isSales && !path.startsWith('/home/sales') && path != '/settings') {
+        return '/home/sales';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/splash',

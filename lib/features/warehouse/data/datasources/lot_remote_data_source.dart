@@ -2,12 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
-import 'package:wms_durich/features/warehouse/data/datasources/lot_mock_data_source.dart';
 
-// USING MOCK DATA - API is down
+// USING REAL API
 final lotRemoteDataSourceProvider = Provider<LotRemoteDataSource>((ref) {
-  return LotMockDataSourceImpl();
-  // return LotRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
+  return LotRemoteDataSourceImpl(ref.read(dioProvider));
 });
 
 abstract class LotRemoteDataSource {
@@ -17,8 +15,8 @@ abstract class LotRemoteDataSource {
   Future<CreateLotResponse> createLot(CreateLotRequest request);
   Future<AddItemsToLotResponse> addItemsToLot(
       String lotId, AddItemsToLotRequest request);
-  Future<FinalizeLotResponse> finalizeLot(
-      String lotId, FinalizeLotRequest request);
+  Future<void> removeItemFromLot(String lotId, RemoveItemFromLotRequest request);
+  Future<FinalizeLotResponse> finalizeLot(String lotId, FinalizeLotRequest request);
 }
 
 class LotRemoteDataSourceImpl implements LotRemoteDataSource {
@@ -62,8 +60,8 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
     try {
       final response = await _dio.post('/v1/lots', data: request.toJson());
       return CreateLotResponse.fromJson(response.data['data']);
-    } catch (e) {
-      rethrow;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to create lot');
     }
   }
 
@@ -73,9 +71,19 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
     try {
       final response =
           await _dio.post('/v1/lots/$lotId/items', data: request.toJson());
-      return AddItemsToLotResponse.fromJson(response.data['data']);
-    } catch (e) {
-      rethrow;
+      return AddItemsToLotResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to add items to lot');
+    }
+  }
+
+  @override
+  Future<void> removeItemFromLot(
+      String lotId, RemoveItemFromLotRequest request) async {
+    try {
+      await _dio.delete('/v1/lots/$lotId/items', data: request.toJson());
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to remove item from lot');
     }
   }
 
@@ -85,9 +93,9 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
     try {
       final response =
           await _dio.post('/v1/lots/$lotId/finalize', data: request.toJson());
-      return FinalizeLotResponse.fromJson(response.data['data']);
-    } catch (e) {
-      rethrow;
+      return FinalizeLotResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to finalize lot');
     }
   }
 }

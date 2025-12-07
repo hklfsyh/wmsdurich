@@ -2,17 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/auth/data/models/auth_response_model.dart';
-import 'package:wms_durich/features/auth/data/datasources/auth_mock_data_source.dart';
 
-// USING MOCK DATA - API is down
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
-  return AuthMockDataSourceImpl();
-  // return AuthRemoteDataSourceImpl(ref.read(dioProvider)); // Original API call
+  return AuthRemoteDataSourceImpl(ref.read(dioProvider));
 });
 
 abstract class AuthRemoteDataSource {
   Future<AuthResponseModel> login(String email, String password);
   Future<void> logout(String refreshToken);
+  Future<String> refreshToken(String refreshToken);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -32,33 +30,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return AuthResponseModel.fromJson(response.data);
+        final authResponse = AuthResponseModel.fromJson(response.data);
+        return authResponse;
       } else {
-        throw Exception('Login failed with status: ${response.statusCode}');
+        final message = response.data['message'] ?? 'Login failed';
+        throw Exception(message);
       }
     } on DioException catch (e) {
-      // Handle Dio Error Response based on GoLang struct
-      // { "success": false, "message": "...", "code": ... }
-
-      String errorMessage = 'Connection error';
+      String errorMessage = 'Koneksi gagal';
 
       if (e.response != null && e.response?.data != null) {
         final data = e.response?.data;
 
-        // If response is a Map, try to extract 'message'
         if (data is Map<String, dynamic>) {
-          if (data['message'] != null) {
-            errorMessage = data['message'].toString();
-          }
+          errorMessage = data['message']?.toString() ?? 'Login gagal';
         } else if (data is String) {
-          // Sometimes raw string response
           errorMessage = data;
         }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Koneksi timeout';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = 'Tidak dapat terhubung ke server. Pastikan backend berjalan di ${_dio.options.baseUrl}';
       }
 
       throw Exception(errorMessage);
     } catch (e) {
-      throw Exception('Data parsing error: $e');
+      throw Exception('Error parsing data: $e');
     }
   }
 
@@ -72,8 +69,29 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         },
       );
     } on DioException catch (e) {
-      // Ignore logout errors usually, or log them
       throw Exception(e.response?.data['message'] ?? 'Logout failed');
+    }
+  }
+
+  @override
+  Future<String> refreshToken(String refreshToken) async {
+    try {
+      final response = await _dio.post(
+        '/v1/authentications/refresh-token',
+        data: {
+          'refresh_token': refreshToken,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data['data'];
+        final newAccessToken = data['access_token'] as String;
+        return newAccessToken;
+      } else {
+        throw Exception('Refresh token failed');
+      }
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Refresh token failed');
     }
   }
 }

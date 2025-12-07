@@ -23,6 +23,15 @@ class _AddItemToShipmentDialogState extends ConsumerState<AddItemToShipmentDialo
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Fetch available lots when dialog opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(shipmentProvider.notifier).fetchAvailableLots();
+    });
+  }
+
+  @override
   void dispose() {
     _qtyController.dispose();
     _beratController.dispose();

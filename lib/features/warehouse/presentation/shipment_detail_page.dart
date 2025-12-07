@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/widgets/add_item_to_shipment_dialog.dart';
 
 class ShipmentDetailPage extends ConsumerStatefulWidget {
@@ -18,6 +19,15 @@ class ShipmentDetailPage extends ConsumerStatefulWidget {
 
 class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
   bool _isFinalizingLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch detail (including items) when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(shipmentProvider.notifier).fetchShipmentDetail(widget.shipmentId);
+    });
+  }
 
   void _showAddItemDialog() {
     showModalBottomSheet(
@@ -231,6 +241,7 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
 
       try {
         await ref.read(shipmentProvider.notifier).finalizeShipment(widget.shipmentId);
+        ref.invalidate(warehouseDataProvider);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -431,7 +442,7 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        shipment.id,
+                        shipment.kode,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,

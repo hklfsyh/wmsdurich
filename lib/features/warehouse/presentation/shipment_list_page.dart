@@ -49,6 +49,10 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
     });
   }
 
+  Future<void> _refreshShipments() async {
+    await ref.read(shipmentProvider.notifier).refreshShipments();
+  }
+
   @override
   Widget build(BuildContext context) {
     final shipmentState = ref.watch(shipmentProvider);
@@ -94,8 +98,14 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildShipmentList(draftShipments, isDraft: true),
-          _buildShipmentList(historyShipments, isDraft: false),
+          RefreshIndicator(
+            onRefresh: _refreshShipments,
+            child: _buildShipmentList(draftShipments, isDraft: true),
+          ),
+          RefreshIndicator(
+            onRefresh: _refreshShipments,
+            child: _buildShipmentList(historyShipments, isDraft: false),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -126,37 +136,49 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
   }
 
   Widget _buildEmptyState(bool isDraft) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isDraft ? LucideIcons.fileEdit : LucideIcons.history,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isDraft ? 'Tidak ada Draft Pengiriman' : 'Tidak ada Riwayat',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isDraft ? LucideIcons.fileEdit : LucideIcons.history,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isDraft ? 'Tidak ada Draft Pengiriman' : 'Tidak ada Riwayat',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isDraft
+                        ? 'Tap tombol "Buat Pengiriman" untuk membuat draft baru'
+                        : 'Pengiriman yang sudah dikirim akan tampil di sini',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            isDraft
-                ? 'Tap tombol "Buat Pengiriman" untuk membuat draft baru'
-                : 'Pengiriman yang sudah dikirim akan tampil di sini',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -220,7 +242,7 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'ID: ${shipment.id}',
+                          shipment.kode,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,

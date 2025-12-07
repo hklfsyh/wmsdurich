@@ -11,6 +11,7 @@ abstract class LotRepository {
   Future<LotDetailResponse> getLotDetail(String lotId);
   Future<CreateLotResponse> createLot(CreateLotRequest request);
   Future<AddItemsToLotResponse> addItemsToLot(String lotId, AddItemsToLotRequest request);
+  Future<void> removeItemFromLot(String lotId, RemoveItemFromLotRequest request);
   Future<FinalizeLotResponse> finalizeLot(String lotId, FinalizeLotRequest request);
 }
 
@@ -37,6 +38,11 @@ class LotRepositoryImpl implements LotRepository {
   @override
   Future<AddItemsToLotResponse> addItemsToLot(String lotId, AddItemsToLotRequest request) async {
     return await _dataSource.addItemsToLot(lotId, request);
+  }
+
+  @override
+  Future<void> removeItemFromLot(String lotId, RemoveItemFromLotRequest request) async {
+    return await _dataSource.removeItemFromLot(lotId, request);
   }
 
   @override

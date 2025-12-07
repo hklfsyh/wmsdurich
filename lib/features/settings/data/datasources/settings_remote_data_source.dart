@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/settings/data/models/password_request_models.dart';
 import 'package:wms_durich/features/settings/data/datasources/settings_mock_data_source.dart';
 

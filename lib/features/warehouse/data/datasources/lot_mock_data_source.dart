@@ -27,6 +27,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: 125.5,
       qtySisa: 50,
       currentQty: 50,
+      currentBerat: 125.5,
       status: 'ready',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
     );
@@ -42,6 +43,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: 98.3,
       qtySisa: 40,
       currentQty: 40,
+      currentBerat: 98.3,
       status: 'ready',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
     );
@@ -57,6 +59,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: 0,
       qtySisa: 0,
       currentQty: 15,
+      currentBerat: 0,
       status: 'in_process',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
     );
@@ -72,12 +75,16 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
         kodeBuah: 'MSW-2024-1001',
         tglPanen: DateTime.now().subtract(const Duration(days: 2)),
         asalBlok: 'BLK-A01',
+        jenisDurian: 'MSW - Musang King',
+        berat: 2.5,
       ),
       LotDetailItem(
         id: 'item-002',
         kodeBuah: 'MSW-2024-1002',
         tglPanen: DateTime.now().subtract(const Duration(days: 2)),
         asalBlok: 'BLK-A01',
+        jenisDurian: 'MSW - Musang King',
+        berat: 3.0,
       ),
     ];
 
@@ -87,6 +94,8 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
         kodeBuah: 'BHM-2024-2001',
         tglPanen: DateTime.now().subtract(const Duration(days: 1)),
         asalBlok: 'BLK-B02',
+        jenisDurian: 'BHM - Black Thorn',
+        berat: 2.8,
       ),
     ];
 
@@ -96,6 +105,8 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
         kodeBuah: 'D24-2024-3001',
         tglPanen: DateTime.now().subtract(const Duration(hours: 5)),
         asalBlok: 'BLK-C03',
+        jenisDurian: 'D24 - D24',
+        berat: 3.2,
       ),
     ];
   }
@@ -181,6 +192,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: 0,
       qtySisa: 0,
       currentQty: 0,
+      currentBerat: 0,
       status: 'in_process',
       createdAt: DateTime.now(),
     );
@@ -210,20 +222,19 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
 
     final items = _mockLotItems[lotId] ?? [];
 
-    // Add new items
-    for (int i = 0; i < request.buahRawIds.length; i++) {
-      items.add(LotDetailItem(
-        id: 'item-${DateTime.now().millisecondsSinceEpoch}-$i',
-        kodeBuah:
-            'BUAH-${DateTime.now().year}-${(items.length + i + 1).toString().padLeft(4, '0')}',
-        tglPanen: DateTime.now().subtract(Duration(hours: i)),
-        asalBlok: 'BLK-A0${(i % 3) + 1}',
-      ));
-    }
+    final newItem = LotDetailItem(
+      id: 'item-${DateTime.now().millisecondsSinceEpoch}',
+      kodeBuah:
+          'BUAH-${DateTime.now().year}-${(items.length + 1).toString().padLeft(4, '0')}',
+      tglPanen: DateTime.now(),
+      asalBlok: 'BLK-${request.pohonKode}',
+      jenisDurian: lot.jenisDurianNama,
+      berat: request.berat,
+    );
 
+    items.add(newItem);
     _mockLotItems[lotId] = items;
 
-    // Update lot current qty
     final updatedLot = LotModel(
       id: lot.id,
       kode: lot.kode,
@@ -235,6 +246,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: lot.beratSisa,
       qtySisa: lot.qtySisa,
       currentQty: items.length,
+      currentBerat: lot.currentBerat + request.berat,
       status: lot.status,
       createdAt: lot.createdAt,
     );
@@ -242,6 +254,39 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
     _mockLots[lotId] = updatedLot;
 
     return AddItemsToLotResponse(currentQty: items.length);
+  }
+
+  @override
+  Future<void> removeItemFromLot(
+      String lotId, RemoveItemFromLotRequest request) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    final lot = _mockLots[lotId];
+    if (lot == null) {
+      throw Exception('Lot not found');
+    }
+
+    final items = _mockLotItems[lotId] ?? [];
+    items.removeWhere((item) => item.id == request.buahRawId);
+    _mockLotItems[lotId] = items;
+
+    final updatedLot = LotModel(
+      id: lot.id,
+      kode: lot.kode,
+      jenisDurianId: lot.jenisDurianId,
+      jenisDurianNama: lot.jenisDurianNama,
+      kondisiBuah: lot.kondisiBuah,
+      beratAwal: lot.beratAwal,
+      qtyAwal: lot.qtyAwal,
+      beratSisa: lot.beratSisa,
+      qtySisa: lot.qtySisa,
+      currentQty: items.length,
+      currentBerat: lot.currentBerat,
+      status: lot.status,
+      createdAt: lot.createdAt,
+    );
+
+    _mockLots[lotId] = updatedLot;
   }
 
   @override
@@ -256,9 +301,8 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
 
     final items = _mockLotItems[lotId] ?? [];
     final qtyTotal = items.length;
-    final beratTotal = request.beratAwal;
+    final beratTotal = qtyTotal * 2.5;
 
-    // Update lot to ready status
     final updatedLot = LotModel(
       id: lot.id,
       kode: lot.kode,
@@ -270,6 +314,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       beratSisa: beratTotal,
       qtySisa: qtyTotal,
       currentQty: qtyTotal,
+      currentBerat: beratTotal,
       status: 'ready',
       createdAt: lot.createdAt,
     );

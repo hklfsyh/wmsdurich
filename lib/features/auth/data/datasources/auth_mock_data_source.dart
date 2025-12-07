@@ -30,4 +30,12 @@ class AuthMockDataSourceImpl implements AuthRemoteDataSource {
     await Future.delayed(const Duration(milliseconds: 300));
     // Mock logout always succeeds
   }
+
+  @override
+  Future<String> refreshToken(String refreshToken) async {
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    // Return mock new access token
+    return 'mock_new_access_token_${DateTime.now().millisecondsSinceEpoch}';
+  }
 }

@@ -49,17 +49,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           SnackBar(
             content: Text(next.error!),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       } else if (next.isAuthenticated && !next.isLoading) {
         final user = next.user;
+        
+        // Role-based navigation
         if (user?.isAdmin ?? false) {
+          // Admin: akses semua page
           context.go('/home');
         } else if (user?.isWarehouse ?? false) {
+          // Warehouse: hanya page warehouse
           context.go('/home/warehouse');
         } else if (user?.isSales ?? false) {
+          // Sales: hanya page sales
           context.go('/home/sales');
         } else {
+          // Default: home page
           context.go('/home');
         }
       }
@@ -74,37 +81,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 30),
-
-              // Mock Data Banner
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.orange.shade700, size: 18),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'Mode Demo - Gunakan email & password apapun',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade900,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
 
               // 1. Logo Aplikasi
               Image.asset(

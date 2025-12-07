@@ -9,6 +9,7 @@ class LotModel {
   final double beratSisa;
   final int qtySisa;
   final int currentQty;
+  final double currentBerat;
   final String status;
   final DateTime createdAt;
 
@@ -23,6 +24,7 @@ class LotModel {
     required this.beratSisa,
     required this.qtySisa,
     required this.currentQty,
+    required this.currentBerat,
     required this.status,
     required this.createdAt,
   });
@@ -39,6 +41,7 @@ class LotModel {
       beratSisa: (json['berat_sisa'] ?? 0).toDouble(),
       qtySisa: json['qty_sisa'] ?? 0,
       currentQty: json['current_qty'] ?? 0,
+      currentBerat: (json['current_berat'] ?? 0).toDouble(),
       status: json['status'] ?? '',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -107,13 +110,21 @@ class CreateLotResponse {
 }
 
 class AddItemsToLotRequest {
-  final List<String> buahRawIds;
+  final String pohonKode;
+  final String blokId;
+  final double berat;
 
-  AddItemsToLotRequest({required this.buahRawIds});
+  AddItemsToLotRequest({
+    required this.pohonKode,
+    required this.blokId,
+    required this.berat,
+  });
 
   Map<String, dynamic> toJson() {
     return {
-      'buah_raw_ids': buahRawIds,
+      'pohon_kode': pohonKode,
+      'blok_id': blokId,
+      'berat': berat,
     };
   }
 }
@@ -124,21 +135,30 @@ class AddItemsToLotResponse {
   AddItemsToLotResponse({required this.currentQty});
 
   factory AddItemsToLotResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? json;
     return AddItemsToLotResponse(
-      currentQty: json['current_qty'] ?? 0,
+      currentQty: data['current_qty'] ?? 0,
     );
   }
 }
 
-class FinalizeLotRequest {
-  final double beratAwal;
+class RemoveItemFromLotRequest {
+  final String buahRawId;
 
-  FinalizeLotRequest({required this.beratAwal});
+  RemoveItemFromLotRequest({required this.buahRawId});
 
   Map<String, dynamic> toJson() {
     return {
-      'berat_awal': beratAwal,
+      'buah_raw_id': buahRawId,
     };
+  }
+}
+
+class FinalizeLotRequest {
+  FinalizeLotRequest();
+
+  Map<String, dynamic> toJson() {
+    return {};
   }
 }
 
@@ -156,11 +176,12 @@ class FinalizeLotResponse {
   });
 
   factory FinalizeLotResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? json;
     return FinalizeLotResponse(
-      id: json['id'] ?? '',
-      qtyTotal: json['qty_total'] ?? 0,
-      beratTotal: (json['berat_total'] ?? 0).toDouble(),
-      status: json['status'] ?? '',
+      id: data['id'] ?? '',
+      qtyTotal: data['qty_total'] ?? 0,
+      beratTotal: (data['berat_total'] ?? 0).toDouble(),
+      status: data['status'] ?? '',
     );
   }
 }
@@ -170,12 +191,16 @@ class LotDetailItem {
   final String kodeBuah;
   final DateTime tglPanen;
   final String asalBlok;
+  final String jenisDurian;
+  final double berat;
 
   LotDetailItem({
     required this.id,
     required this.kodeBuah,
     required this.tglPanen,
     required this.asalBlok,
+    required this.jenisDurian,
+    required this.berat,
   });
 
   factory LotDetailItem.fromJson(Map<String, dynamic> json) {
@@ -186,6 +211,8 @@ class LotDetailItem {
           ? DateTime.parse(json['tgl_panen'])
           : DateTime.now(),
       asalBlok: json['asal_blok'] ?? '',
+      jenisDurian: json['jenis_durian'] ?? '',
+      berat: (json['berat'] ?? 0).toDouble(),
     );
   }
 }

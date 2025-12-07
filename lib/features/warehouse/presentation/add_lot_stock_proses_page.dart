@@ -3,15 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
+import 'package:wms_durich/features/warehouse/data/repositories/lot_repository.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 
-/// Lotting Terminal - New Flow Implementation
-///
-/// Stage 1: Create Lot DRAFT (pilih jenis & kondisi)
-/// Stage 2: Serial Input (ID Buah + Berat, auto-submit on Enter)
-/// - Live summary: total items & total berat
-/// - Tombol "Done" → finalisasi Lot (DRAFT → READY TO SEND)
 class AddLotStockProsesPage extends ConsumerStatefulWidget {
   const AddLotStockProsesPage({super.key});
 
@@ -21,121 +16,110 @@ class AddLotStockProsesPage extends ConsumerStatefulWidget {
 }
 
 class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
-  // Stage Management
-  int _currentStage = 1; // 1 = Create Lot DRAFT, 2 = Serial Input
+  // Stage: 'create' or 'scanning'
+  String _stage = 'create';
 
-  // Stage 1: Lot Creation
-  String? _selectedJenisId;
+  // Create Lot Stage
+  String? _selectedJenisDurianId;
   String? _selectedKondisi;
-  String? _jenisError;
-  String? _kondisiError;
-  bool _isCreatingLot = false;
-
-  // Stage 2: Lot Data
-  String? _lotId; // Used for real API calls
-  String? _lotKode;
-  String? _lotJenisNama;
-
-  // Stage 2: Serial Input
-  final TextEditingController _idBuahController = TextEditingController();
-  final TextEditingController _beratController = TextEditingController();
-  final FocusNode _idBuahFocus = FocusNode();
-  final FocusNode _beratFocus = FocusNode();
-
-  // Stage 2: Live Summary
-  int _totalItems = 0;
-  double _totalBerat = 0.0;
-  final List<Map<String, dynamic>> _addedItems = [];
-  bool _isAddingItem = false;
-
-  // Stage 2: Finalization
-  bool _isFinalizing = false;
-
-  final List<Map<String, String>> _kondisiOptions = [
+  final _kondisiOptions = [
     {'value': 'A', 'label': 'A - Bagus'},
     {'value': 'B', 'label': 'B - Rusak Sebagian / Bakal Pulping'},
     {'value': 'M', 'label': 'M - Belum Masak'},
     {'value': 'R', 'label': 'R - Reject / Rusak / Busuk'},
   ];
 
+  String? _createdLotId;
+  String? _createdLotKode;
+
+  final TextEditingController _pohonKodeController = TextEditingController();
+  final TextEditingController _beratController = TextEditingController();
+  final FocusNode _pohonKodeFocusNode = FocusNode();
+  final FocusNode _beratFocusNode = FocusNode();
+  final FocusNode _blokFocusNode = FocusNode();
+
+  String? _selectedBlokId;
+
+  int _totalItems = 0;
+  double _totalBerat = 0.0;
+  List<LotDetailItem> _scannedItems = [];
+
+  bool _isProcessing = false;
+
   @override
   void dispose() {
-    _idBuahController.dispose();
+    _pohonKodeController.dispose();
     _beratController.dispose();
-    _idBuahFocus.dispose();
-    _beratFocus.dispose();
+    _pohonKodeFocusNode.dispose();
+    _beratFocusNode.dispose();
+    _blokFocusNode.dispose();
     super.dispose();
   }
 
-  // ==================== STAGE 1: CREATE LOT DRAFT ====================
-
-  Future<void> _createLotDraft() async {
-    setState(() {
-      _jenisError = null;
-      _kondisiError = null;
-    });
-
-    if (_selectedJenisId == null) {
-      setState(() {
-        _jenisError = 'Pilih jenis durian';
-      });
+  Future<void> _createLot() async {
+    // Validation
+    if (_selectedJenisDurianId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih jenis durian terlebih dahulu'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
     if (_selectedKondisi == null) {
-      setState(() {
-        _kondisiError = 'Pilih kondisi buah';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih kondisi buah terlebih dahulu'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-    setState(() {
-      _isCreatingLot = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
-      final controller = ref.read(createLotControllerProvider.notifier);
       final request = CreateLotRequest(
-        jenisDurianId: _selectedJenisId!,
+        jenisDurianId: _selectedJenisDurianId!,
         kondisiBuah: _selectedKondisi!,
       );
 
-      final response = await controller.createLot(request);
+      final response = await ref
+          .read(createLotControllerProvider.notifier)
+          .createLot(request);
 
       if (response == null) {
-        throw Exception('Failed to create lot');
+        throw Exception('Gagal membuat lot');
       }
 
       setState(() {
-        _lotId = response.id;
-        _lotKode = response.kode;
-        _lotJenisNama = response.jenisDurianNama;
-        _currentStage = 2;
-        _isCreatingLot = false;
+        _createdLotId = response.id;
+        _createdLotKode = response.kode;
+        _stage = 'scanning';
+        _isProcessing = false;
+      });
+
+      // Auto focus to first field
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _pohonKodeFocusNode.requestFocus();
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Lot DRAFT berhasil dibuat: ${response.kode}'),
+            content: Text('Lot ${response.kode} berhasil dibuat'),
             backgroundColor: Colors.green,
           ),
         );
-
-        // Auto-focus ke input ID Buah
-        Future.delayed(const Duration(milliseconds: 300), () {
-          _idBuahFocus.requestFocus();
-        });
       }
     } catch (e) {
-      setState(() {
-        _isCreatingLot = false;
-      });
-
+      setState(() => _isProcessing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✗ Gagal membuat lot: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -143,31 +127,40 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
     }
   }
 
-  // ==================== STAGE 2: SERIAL INPUT ====================
-
-  Future<void> _submitItem() async {
-    final idBuah = _idBuahController.text.trim();
+  Future<void> _submitBuahItem() async {
+    final pohonKode = _pohonKodeController.text.trim();
     final beratText = _beratController.text.trim();
 
-    if (idBuah.isEmpty) {
+    if (pohonKode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✗ ID Buah tidak boleh kosong'),
+          content: Text('Pohon Kode tidak boleh kosong'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 1),
         ),
       );
+      _pohonKodeFocusNode.requestFocus();
+      return;
+    }
+
+    if (_selectedBlokId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Blok harus dipilih'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      _blokFocusNode.requestFocus();
       return;
     }
 
     if (beratText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✗ Berat tidak boleh kosong'),
+          content: Text('Berat tidak boleh kosong'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 1),
         ),
       );
+      _beratFocusNode.requestFocus();
       return;
     }
 
@@ -175,60 +168,143 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
     if (berat == null || berat <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✗ Berat harus berupa angka positif'),
+          content: Text('Berat harus berupa angka positif'),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 1),
+        ),
+      );
+      _beratFocusNode.requestFocus();
+      return;
+    }
+
+    if (_createdLotId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lot belum dibuat'),
+          backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    setState(() {
-      _isAddingItem = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
-      // Simulate API call to add item to lot (MOCK)
-      // Real: await lotRepository.addItemToLot(lotId, idBuah, berat)
-      await Future.delayed(const Duration(milliseconds: 500));
+      await ref.read(addItemsToLotControllerProvider.notifier).addItems(
+            _createdLotId!,
+            AddItemsToLotRequest(
+              pohonKode: pohonKode,
+              blokId: _selectedBlokId!,
+              berat: berat,
+            ),
+          );
 
-      // Update local state
+      // Refresh data from API
+      final repository = ref.read(lotRepositoryProvider);
+      final response = await repository.getLotDetail(_createdLotId!);
+
       setState(() {
-        _totalItems++;
-        _totalBerat += berat;
-        _addedItems.insert(0, {
-          'idBuah': idBuah,
-          'berat': berat,
-          'timestamp': DateTime.now(),
-        });
-
-        _idBuahController.clear();
-        _beratController.clear();
-        _isAddingItem = false;
+        _scannedItems = response.items;
+        _totalItems = response.header.currentQty;
+        _totalBerat = response.header.currentBerat;
+        _isProcessing = false;
       });
 
-      // Show success feedback
+      _pohonKodeController.clear();
+      _beratController.clear();
+
+      _pohonKodeFocusNode.requestFocus();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Item ditambahkan: $idBuah ($berat kg)'),
+            content: Text('✓ $pohonKode (${berat}kg) ditambahkan'),
             backgroundColor: Colors.green,
-            duration: const Duration(milliseconds: 800),
+            duration: const Duration(seconds: 1),
           ),
         );
-
-        // Auto-focus back to ID Buah input
-        _idBuahFocus.requestFocus();
       }
     } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      _pohonKodeFocusNode.requestFocus();
+    }
+  }
+
+  Future<void> _removeItem(int index) async {
+    final item = _scannedItems[index];
+    final buahRawId = item.id;
+
+    if (buahRawId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID item tidak valid.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Item?'),
+        content: Text('Hapus ${item.kodeBuah}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final request = RemoveItemFromLotRequest(buahRawId: buahRawId);
+      await ref
+          .read(removeItemFromLotControllerProvider.notifier)
+          .removeItem(_createdLotId!, request);
+
+      // Refresh data from API
+      final repository = ref.read(lotRepositoryProvider);
+      final response = await repository.getLotDetail(_createdLotId!);
+
       setState(() {
-        _isAddingItem = false;
+        _scannedItems = response.items;
+        _totalItems = response.header.currentQty;
+        _totalBerat = response.header.currentBerat;
+        _isProcessing = false;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item berhasil dihapus'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✗ Gagal menambahkan item: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -236,60 +312,26 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
     }
   }
 
-  // ==================== STAGE 2: FINALIZATION ====================
-
   Future<void> _finalizeLot() async {
     if (_totalItems == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✗ Tidak ada item yang ditambahkan'),
+          content: Text('Tambahkan minimal 1 buah sebelum finalisasi'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // Confirm before finalizing
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(LucideIcons.checkCircle, color: AppColors.primary, size: 24),
-            SizedBox(width: 12),
-            Text('Finalisasi Lot?'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Apakah Anda yakin ingin menyelesaikan lot ini?'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  _buildSummaryRow('Kode Lot', _lotKode ?? '-'),
-                  const Divider(),
-                  _buildSummaryRow('Total Item', '$_totalItems buah'),
-                  const Divider(),
-                  _buildSummaryRow(
-                      'Total Berat', '${_totalBerat.toStringAsFixed(2)} kg'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Status akan berubah menjadi READY TO SEND',
-              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-            ),
-          ],
+        title: const Text('Finalisasi Lot?'),
+        content: Text(
+          'Lot $_createdLotKode akan difinalisasi dengan:\n\n'
+          '• Total Item: $_totalItems buah\n'
+          '• Total Berat: ${_totalBerat.toStringAsFixed(2)} kg\n\n'
+          'Status akan berubah menjadi READY TO SEND',
         ),
         actions: [
           TextButton(
@@ -300,9 +342,8 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
             ),
-            child: const Text('Ya, Finalisasi'),
+            child: const Text('Finalisasi'),
           ),
         ],
       ),
@@ -310,35 +351,47 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
 
     if (confirm != true) return;
 
-    setState(() {
-      _isFinalizing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
-      // Simulate API call to finalize lot (MOCK)
-      // Real: await lotRepository.finalizeLot(lotId, totalBerat)
-      await Future.delayed(const Duration(seconds: 1));
+      final request = FinalizeLotRequest();
+      final response = await ref
+          .read(finalizeLotControllerProvider.notifier)
+          .finalize(_createdLotId!, request);
+
+      if (response == null) {
+        throw Exception('Gagal finalisasi lot');
+      }
+
+      // Invalidate providers
+      ref.invalidate(warehouseDataProvider);
+      ref.invalidate(lotDetailProvider(_createdLotId!));
+      ref.invalidate(allDraftLotsProvider);
+      ref.invalidate(allReadyLotsProvider);
+
+      setState(() => _isProcessing = false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✓ Lot $_lotKode berhasil difinalisasi!'),
+          const SnackBar(
+            content: Text('Lot berhasil difinalisasi!'),
             backgroundColor: Colors.green,
           ),
         );
 
-        // Navigate back
-        Navigator.pop(context);
+        // Navigate back with delay
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            Navigator.pop(context, true);
+          }
+        });
       }
     } catch (e) {
-      setState(() {
-        _isFinalizing = false;
-      });
-
+      setState(() => _isProcessing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✗ Gagal finalisasi lot: $e'),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -346,50 +399,30 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
     }
   }
 
-  // ==================== UI BUILDERS ====================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(_currentStage == 1 ? 'Buat Lot Baru' : 'Lotting Terminal'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          // DEMO Badge
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text(
-              'DEMO',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+        title: Text(_stage == 'create' ? 'Buat Lot Baru' : 'Lotting Terminal'),
+        leading: IconButton(
+          icon: const Icon(LucideIcons.arrowLeft),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: _currentStage == 1
-          ? _buildStage1CreateLot()
-          : _buildStage2SerialInput(),
+      body: _stage == 'create' ? _buildCreateStage() : _buildScanningStage(),
     );
   }
 
-  Widget _buildStage1CreateLot() {
+  Widget _buildCreateStage() {
     final jenisDurianAsync = ref.watch(jenisDurianProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Info Box
+          // Info Card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -399,18 +432,18 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.info, color: Colors.blue.shade700, size: 20),
+                Icon(LucideIcons.info, color: Colors.blue.shade700, size: 24),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Buat Lot DRAFT untuk memulai input serial',
+                    'Buat Lot DRAFT baru untuk memulai proses lotting',
                     style: TextStyle(fontSize: 14),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           // Jenis Durian
           const Text(
@@ -422,39 +455,34 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
           ),
           const SizedBox(height: 8),
           jenisDurianAsync.when(
-            data: (jenisList) => DropdownButtonFormField<String>(
-              value: _selectedJenisId,
-              decoration: InputDecoration(
-                hintText: 'Pilih jenis durian',
-                errorText: _jenisError,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
+            data: (jenisList) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-              items: jenisList
-                  .map((jenis) => DropdownMenuItem<String>(
-                        value: jenis.id,
-                        child: Text(jenis.displayName),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedJenisId = value;
-                  _jenisError = null;
-                });
-              },
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedJenisDurianId,
+                  hint: const Text('Pilih Jenis Durian'),
+                  isExpanded: true,
+                  items: jenisList.map((jenis) {
+                    return DropdownMenuItem<String>(
+                      value: jenis.id,
+                      child: Text(jenis.displayName),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => _selectedJenisDurianId = value);
+                  },
+                ),
+              ),
             ),
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            error: (error, stack) => Text(
-              'Error: $error',
-              style: const TextStyle(color: Colors.red),
-            ),
+            loading: () => const CircularProgressIndicator(),
+            error: (_, __) => const Text('Error loading jenis'),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Kondisi Buah
           const Text(
@@ -465,65 +493,58 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
             ),
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedKondisi,
-            decoration: InputDecoration(
-              hintText: 'Pilih kondisi',
-              errorText: _kondisiError,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-            items: _kondisiOptions
-                .map((kondisi) => DropdownMenuItem<String>(
-                      value: kondisi['value'],
-                      child: Text(kondisi['label']!),
-                    ))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedKondisi = value;
-                _kondisiError = null;
-              });
-            },
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedKondisi,
+                hint: const Text('Pilih Kondisi'),
+                isExpanded: true,
+                items: _kondisiOptions.map((kondisi) {
+                  return DropdownMenuItem<String>(
+                    value: kondisi['value'],
+                    child: Text(kondisi['label']!),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() => _selectedKondisi = value);
+                },
+              ),
+            ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
 
           // Create Button
           ElevatedButton(
-            onPressed: _isCreatingLot ? null : _createLotDraft,
+            onPressed: _isProcessing ? null : _createLot,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: _isCreatingLot
+            child: _isProcessing
                 ? const SizedBox(
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
+                      color: Colors.white,
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(LucideIcons.plus),
-                      SizedBox(width: 12),
-                      Text(
-                        'Buat Lot DRAFT',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                : const Text(
+                    'Buat Lot DRAFT',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ],
@@ -531,61 +552,63 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
     );
   }
 
-  Widget _buildStage2SerialInput() {
+  Widget _buildScanningStage() {
     return Column(
       children: [
-        // Lot Header - TETAP di luar SingleChildScrollView
+        // Lot Info Header (Compact)
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.1),
             border: Border(
               bottom: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  const Icon(LucideIcons.package,
-                      color: AppColors.primary, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _lotKode ?? '-',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        Text(
-                          _lotJenisNama ?? '-',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+              const Icon(LucideIcons.package,
+                  color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _createdLotKode ?? '-',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
+                    Text(
                       'DRAFT',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              // Compact Summary
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$_totalItems item',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  Text(
+                    '${_totalBerat.toStringAsFixed(1)} kg',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
                     ),
                   ),
                 ],
@@ -594,172 +617,289 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
           ),
         ),
 
-        // Konten Utama (Form Input + Summary + List) - DIBUNGKUS S.C.V
+        // Scrollable Content
         Expanded(
           child: SingleChildScrollView(
-            // Padding harus ada di dalam S.C.V
-            padding: const EdgeInsets.only(top: 16.0),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Input Form (Input ID Buah & Berat)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300, width: 2),
-                    ),
+                const Text(
+                  'Blok',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // ID Buah Input
-                      TextField(
-                        controller: _idBuahController,
-                        focusNode: _idBuahFocus,
+                ),
+                const SizedBox(height: 6),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final blokAsync = ref.watch(bloksProvider);
+                    return blokAsync.when(
+                      data: (bloks) => DropdownButtonFormField<String>(
+                        value: _selectedBlokId,
+                        focusNode: _blokFocusNode,
                         decoration: InputDecoration(
-                          labelText: 'ID Buah',
-                          hintText: 'Scan atau ketik ID buah',
-                          prefixIcon: const Icon(LucideIcons.scan),
+                          hintText: 'Pilih Blok',
+                          hintStyle: const TextStyle(fontSize: 13),
+                          prefixIcon: const Icon(LucideIcons.box, size: 20),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                        ),
-                        onSubmitted: (_) {
-                          _beratFocus.requestFocus();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Berat Input
-                      TextField(
-                        controller: _beratController,
-                        focusNode: _beratFocus,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        decoration: InputDecoration(
-                          labelText: 'Berat (kg)',
-                          hintText: 'Masukkan berat',
-                          prefixIcon: const Icon(LucideIcons.scale),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
+                          isDense: true,
                         ),
-                        onSubmitted: (_) {
-                          _submitItem();
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Submit Button (Optional - bisa dipindah ke bottom bar jika lebih baik)
-                      ElevatedButton(
-                        onPressed: _isAddingItem ? null : _submitItem,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: _isAddingItem
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(LucideIcons.plus, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Tambah Item (Enter)',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                        items: bloks
+                            .map((blok) => DropdownMenuItem<String>(
+                                  value: blok.id,
+                                  child: Text(
+                                    blok.kodeLengkap,
+                                    style: const TextStyle(fontSize: 14),
                                   ),
-                                ],
-                              ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-
-                // Live Summary
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    border: Border(
-                      bottom:
-                          BorderSide(color: Colors.green.shade200, width: 2),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildSummaryCard(
-                          'Total Item',
-                          '$_totalItems',
-                          LucideIcons.hash,
-                          Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSummaryCard(
-                          'Total Berat',
-                          '${_totalBerat.toStringAsFixed(2)} kg',
-                          LucideIcons.scale,
-                          Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Items List (Gunakan ListView.builder di sini)
-                // Karena ListView.separated butuh expanded, kita akan memindahkan list ke dalam SingleChildScrollView
-                if (_addedItems.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Item Ditambahkan (Terakhir di Atas)',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        ..._addedItems
-                            .map((item) => _buildItemCard(item))
+                                ))
                             .toList(),
-                      ],
+                        onChanged: _isProcessing
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selectedBlokId = value;
+                                });
+                                _pohonKodeFocusNode.requestFocus();
+                              },
+                      ),
+                      loading: () => DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          hintText: 'Loading...',
+                          hintStyle: const TextStyle(fontSize: 13),
+                          prefixIcon: const Icon(LucideIcons.box, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          isDense: true,
+                        ),
+                        items: const [],
+                        onChanged: null,
+                      ),
+                      error: (err, _) => DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          hintText: 'Error loading blok',
+                          hintStyle: const TextStyle(fontSize: 13),
+                          prefixIcon: const Icon(LucideIcons.box, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          isDense: true,
+                        ),
+                        items: const [],
+                        onChanged: null,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Pohon Kode',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _pohonKodeController,
+                  focusNode: _pohonKodeFocusNode,
+                  enabled: !_isProcessing,
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Scan Pohon Kode',
+                    hintStyle: const TextStyle(fontSize: 13),
+                    prefixIcon: const Icon(LucideIcons.scan, size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) {
+                    _beratFocusNode.requestFocus();
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Berat (Kg)',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _beratController,
+                  focusNode: _beratFocusNode,
+                  enabled: !_isProcessing,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Berat (kg)',
+                    hintStyle: const TextStyle(fontSize: 13),
+                    prefixIcon: const Icon(LucideIcons.scale, size: 20),
+                    suffixText: 'kg',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) {
+                    _submitBuahItem();
+                  },
+                ),
+                const SizedBox(height: 12),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _submitBuahItem,
+                    icon: _isProcessing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(LucideIcons.plus, size: 18),
+                    label: const Text(
+                      'Tambah (Enter)',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.blueDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
 
-                if (_addedItems.isEmpty)
+                // Scanned Items List (in scrollable area)
+                if (_scannedItems.isNotEmpty) ...[
+                  const Text(
+                    'Item yang sudah dipindai',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _scannedItems.length,
+                    itemBuilder: (context, index) {
+                      final item =
+                          _scannedItems[_scannedItems.length - 1 - index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.green.shade100,
+                            child: Text(
+                              '${_scannedItems.length - index}',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            item.kodeBuah,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.jenisDurian,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              Text(
+                                '${item.asalBlok} • ${item.tglPanen.toString().split(' ')[0]}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                              Text(
+                                '${item.berat.toStringAsFixed(1)} kg',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              LucideIcons.trash2,
+                              size: 20,
+                              color: Colors.red,
+                            ),
+                            onPressed: () => _removeItem(_scannedItems.length - 1 - index),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 100), // Extra space for bottom button
+                ] else ...[
                   Center(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 50.0),
+                      padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Column(
                         children: [
-                          Icon(LucideIcons.inbox,
-                              size: 64, color: Colors.grey.shade400),
-                          const SizedBox(height: 16),
+                          Icon(
+                            LucideIcons.scanLine,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 12),
                           Text(
-                            'Belum ada item yang ditambahkan',
+                            'Belum ada item yang dipindai',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               color: Colors.grey.shade600,
                             ),
                           ),
@@ -767,14 +907,16 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 100), // Extra space for bottom button
+                ],
               ],
             ),
           ),
         ),
 
-        // Finalize Button - TETAP di luar SingleChildScrollView
+        // Done Button (Fixed at bottom)
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
@@ -785,152 +927,25 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
               ),
             ],
           ),
-          child: ElevatedButton(
-            onPressed: _totalItems > 0 && !_isFinalizing ? _finalizeLot : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey.shade300,
-              disabledForegroundColor: Colors.grey.shade500,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          child: SafeArea(
+            child: ElevatedButton(
+              onPressed: _isProcessing ? null : _finalizeLot,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Done - Finalisasi Lot',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            child: _isFinalizing
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(LucideIcons.checkCircle, size: 20),
-                      SizedBox(width: 12),
-                      Text(
-                        'Finalisasi Lot (DRAFT → READY)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard(
-      String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemCard(Map<String, dynamic> item) {
-    final idBuah = item['idBuah'] as String;
-    final berat = item['berat'] as double;
-    final timestamp = item['timestamp'] as DateTime;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.package,
-                color: AppColors.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  idBuah,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '${berat.toStringAsFixed(2)} kg',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
           ),
         ),
       ],
