@@ -128,12 +128,12 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
   }
 
   Future<ShipmentModel> createShipment({
-    required String tujuan,
+    required String tujuanId,
     required DateTime tglKirim,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
-      final newShipment = await _repository.createShipment(tujuan, tglKirim);
+      final newShipment = await _repository.createShipment(tujuanId, tglKirim);
       
       // Add to list
       state = state.copyWith(

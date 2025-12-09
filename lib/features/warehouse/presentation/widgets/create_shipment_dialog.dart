@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/warehouse/data/models/tujuan_pengiriman_model.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/tujuan_pengiriman_provider.dart';
 
 class CreateShipmentDialog extends ConsumerStatefulWidget {
   const CreateShipmentDialog({super.key});
@@ -15,14 +17,13 @@ class CreateShipmentDialog extends ConsumerStatefulWidget {
 
 class _CreateShipmentDialogState extends ConsumerState<CreateShipmentDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _tujuanController = TextEditingController();
+  TujuanPengirimanModel? _selectedTujuan;
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _tujuanController.dispose();
     super.dispose();
   }
 
@@ -67,7 +68,7 @@ class _CreateShipmentDialogState extends ConsumerState<CreateShipmentDialog> {
 
     try {
       final shipment = await ref.read(shipmentProvider.notifier).createShipment(
-            tujuan: _tujuanController.text.trim(),
+            tujuanId: _selectedTujuan?.id ?? '',
             tglKirim: tglKirim,
           );
 
@@ -166,28 +167,91 @@ class _CreateShipmentDialogState extends ConsumerState<CreateShipmentDialog> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _tujuanController,
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: Gudang Jakarta Pusat',
-                      prefixIcon: const Icon(LucideIcons.mapPin),
-                      filled: true,
-                      fillColor: AppColors.fieldBackground,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: AppColors.primary, width: 2),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Tujuan tidak boleh kosong';
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final tujuanState = ref.watch(tujuanPengirimanProvider);
+                      
+                      if (tujuanState.isLoading) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.fieldBackground,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Memuat data tujuan...'),
+                            ],
+                          ),
+                        );
                       }
-                      return null;
+
+                      if (tujuanState.error != null) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.alertCircle,
+                                  color: Colors.red.shade700, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Gagal memuat data tujuan',
+                                  style: TextStyle(color: Colors.red.shade700),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return DropdownButtonFormField<TujuanPengirimanModel>(
+                        value: _selectedTujuan,
+                        decoration: InputDecoration(
+                          hintText: 'Pilih Tujuan Pengiriman',
+                          prefixIcon: const Icon(LucideIcons.mapPin),
+                          filled: true,
+                          fillColor: AppColors.fieldBackground,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                                color: AppColors.primary, width: 2),
+                          ),
+                        ),
+                        items: tujuanState.tujuanList.map((tujuan) {
+                          return DropdownMenuItem<TujuanPengirimanModel>(
+                            value: tujuan,
+                            child: Text(tujuan.nama),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedTujuan = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Tujuan tidak boleh kosong';
+                          }
+                          return null;
+                        },
+                      );
                     },
                   ),
                   const SizedBox(height: 20),
