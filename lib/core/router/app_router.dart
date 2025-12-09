@@ -10,6 +10,7 @@ import 'package:wms_durich/features/home/presentation/home_shell.dart';
 import 'package:wms_durich/features/home/presentation/dashboard_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/warehouse_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/tujuan_pengiriman_page.dart';
 import 'package:wms_durich/features/sales/presentation/sales_page.dart';
 import 'package:wms_durich/features/settings/presentation/pages/settings_page.dart';
 
@@ -118,6 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/warehouse/list-buah',
             builder: (context, state) => const ListBuahPage(),
+          ),
+          GoRoute(
+            path: '/home/warehouse/tujuan-pengiriman',
+            builder: (context, state) => const TujuanPengirimanPage(),
           ),
           GoRoute(
             path: '/home/sales',

@@ -1,15 +1,15 @@
 class CreateShipmentRequest {
-  final String tujuan;
+  final String tujuanId;
   final String tglKirim;
 
   CreateShipmentRequest({
-    required this.tujuan,
+    required this.tujuanId,
     required this.tglKirim,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'tujuan': tujuan,
+      'tujuan_id': tujuanId,
       'tgl_kirim': tglKirim,
     };
   }

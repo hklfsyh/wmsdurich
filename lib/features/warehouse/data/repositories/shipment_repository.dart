@@ -10,7 +10,7 @@ final shipmentRepositoryProvider = Provider<ShipmentRepository>((ref) {
 abstract class ShipmentRepository {
   Future<List<ShipmentModel>> getShipments({String? status});
   Future<ShipmentDetailResponse> getShipmentDetail(String id);
-  Future<ShipmentModel> createShipment(String tujuan, DateTime tglKirim);
+  Future<ShipmentModel> createShipment(String tujuanId, DateTime tglKirim);
   Future<void> addItemToShipment(String id, String lotId, int qty, double berat);
   Future<void> removeItemFromShipment(String id, String detailId);
   Future<void> finalizeShipment(String id);
@@ -33,13 +33,13 @@ class ShipmentRepositoryImpl implements ShipmentRepository {
   }
 
   @override
-  Future<ShipmentModel> createShipment(String tujuan, DateTime tglKirim) {
+  Future<ShipmentModel> createShipment(String tujuanId, DateTime tglKirim) {
     // Format datetime with Z suffix for Go backend compatibility
     final utcTime = tglKirim.toUtc();
     final formattedDate = '${utcTime.toIso8601String().split('.')[0]}Z';
     
     final request = CreateShipmentRequest(
-      tujuan: tujuan,
+      tujuanId: tujuanId,
       tglKirim: formattedDate,
     );
     return _dataSource.createShipment(request);
