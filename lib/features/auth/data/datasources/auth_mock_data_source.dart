@@ -12,6 +12,19 @@ class AuthMockDataSourceImpl implements AuthRemoteDataSource {
     // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 800));
 
+    // Determine roles based on email for testing
+    List<String> roles;
+    if (email.contains('admin')) {
+      roles = ['admin'];
+    } else if (email.contains('warehouse') || email.contains('wh')) {
+      roles = ['warehouse'];
+    } else if (email.contains('sales')) {
+      roles = ['sales'];
+    } else {
+      // Default to warehouse role for any other email
+      roles = ['warehouse'];
+    }
+
     // Mock successful login
     return AuthResponseModel(
       success: true,
@@ -20,7 +33,7 @@ class AuthMockDataSourceImpl implements AuthRemoteDataSource {
       accessToken: 'mock_access_token_${DateTime.now().millisecondsSinceEpoch}',
       refreshToken:
           'mock_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
-      roles: ['admin', 'user'],
+      roles: roles,
     );
   }
 

@@ -3,20 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/core/widgets/profile_dropdown.dart';
-import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_page.dart';
+import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_proses_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_stock_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/shipment_list_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/incoming_shipments_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 
 class WarehousePage extends ConsumerWidget {
   const WarehousePage({super.key});
 
   void _showAddLotStockDialog(BuildContext context) {
-    // Navigasi ke halaman Add Lot Stock
+    // Navigasi langsung ke halaman Buat Lot Baru
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddLotStockPage()),
+      MaterialPageRoute(builder: (context) => const AddLotStockProsesPage()),
     );
   }
 
@@ -24,6 +26,14 @@ class WarehousePage extends ConsumerWidget {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ShipmentListPage()),
+    );
+    ref.invalidate(warehouseDataProvider);
+  }
+
+  void _showIncomingShipmentsPage(BuildContext context, WidgetRef ref) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const IncomingShipmentsPage()),
     );
     ref.invalidate(warehouseDataProvider);
   }
@@ -45,6 +55,8 @@ class WarehousePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final warehouseDataAsync = ref.watch(warehouseDataProvider);
+    final authState = ref.watch(authProvider);
+    final isAdmin = authState.user?.isAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,23 +72,41 @@ class WarehousePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Tombol Add Lot Stock
-            ElevatedButton.icon(
-              onPressed: () => _showAddLotStockDialog(context),
-              icon: const Icon(LucideIcons.package,
-                  color: AppColors.white, size: 20),
-              label: const Text('Add Lot Stock',
-                  style: TextStyle(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                elevation: 0,
+            // 1. Tombol berdasarkan role
+            if (isAdmin)
+              // Tombol untuk Admin Cabang: Lihat Pengiriman Masuk
+              ElevatedButton.icon(
+                onPressed: () => _showIncomingShipmentsPage(context, ref),
+                icon: const Icon(LucideIcons.packageCheck,
+                    color: AppColors.white, size: 20),
+                label: const Text('Lot Sedang Dikirim',
+                    style: TextStyle(
+                        color: AppColors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
+                ),
+              )
+            else
+              // Tombol untuk Warehouse: Add Lot Stock
+              ElevatedButton.icon(
+                onPressed: () => _showAddLotStockDialog(context),
+                icon: const Icon(LucideIcons.package,
+                    color: AppColors.white, size: 20),
+                label: const Text('Add Lot Stock',
+                    style: TextStyle(
+                        color: AppColors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  elevation: 0,
+                ),
               ),
-            ),
             const SizedBox(height: 24),
 
             // 2. List Item dengan Statistik

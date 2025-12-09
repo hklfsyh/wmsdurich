@@ -194,29 +194,37 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final items = detail.items;
     final isReady = header.status == 'READY';
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeaderCard(header),
-                const SizedBox(height: 16),
-                _buildInfoSection(header),
-                const SizedBox(height: 16),
-                _buildItemsSection(items),
-                if (!isReady) ...[
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(lotDetailProvider(widget.lotId));
+        // Wait for the provider to refresh
+        await Future.delayed(const Duration(milliseconds: 500));
+      },
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeaderCard(header),
                   const SizedBox(height: 16),
-                  _buildFinalizeSection(header),
+                  _buildInfoSection(header),
+                  const SizedBox(height: 16),
+                  _buildItemsSection(items),
+                  if (!isReady) ...[
+                    const SizedBox(height: 16),
+                    _buildFinalizeSection(header),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-        if (!isReady) _buildBottomButton(header),
-      ],
+          if (!isReady) _buildBottomButton(header),
+        ],
+      ),
     );
   }
 
@@ -344,7 +352,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                 child: _buildInfoItem(
                   icon: LucideIcons.hash,
                   label: header.status == 'DRAFT' ? 'Qty Saat Ini' : 'Qty Awal',
-                  value: '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} buah',
+                  value:
+                      '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} buah',
                   color: AppColors.primary,
                 ),
               ),
@@ -516,23 +525,6 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Text(
-                        item.jenisDurian,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange.shade800,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     Icon(LucideIcons.mapPin,
                         size: 12, color: Colors.grey.shade600),
                     const SizedBox(width: 4),

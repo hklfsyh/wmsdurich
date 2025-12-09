@@ -51,10 +51,10 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
   ShipmentState build() {
     _repository = ref.read(shipmentRepositoryProvider);
     _lotRepository = ref.read(lotRepositoryProvider);
-    
+
     // Initial fetch
     _fetchInitialData();
-    
+
     return ShipmentState(
       shipments: [],
       shipmentItems: {},
@@ -94,7 +94,7 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
   Future<void> fetchShipmentDetail(String id) async {
     try {
       final detail = await _repository.getShipmentDetail(id);
-      
+
       // Update shipments list with latest header info
       final updatedShipments = state.shipments.map((s) {
         return s.id == id ? detail.header : s;
@@ -106,7 +106,8 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
       }
 
       // Update items map
-      final updatedItems = Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
+      final updatedItems =
+          Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
       updatedItems[id] = detail.items;
 
       state = state.copyWith(
@@ -134,15 +135,16 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
     state = state.copyWith(isLoading: true);
     try {
       final newShipment = await _repository.createShipment(tujuanId, tglKirim);
-      
+
       // Add to list
       state = state.copyWith(
         shipments: [newShipment, ...state.shipments],
-        shipmentItems: Map<String, List<ShipmentItemModel>>.from(state.shipmentItems)
-          ..[newShipment.id] = [],
+        shipmentItems:
+            Map<String, List<ShipmentItemModel>>.from(state.shipmentItems)
+              ..[newShipment.id] = [],
         isLoading: false,
       );
-      
+
       return newShipment;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -159,12 +161,12 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
     state = state.copyWith(isLoading: true);
     try {
       await _repository.addItemToShipment(shipmentId, lot.id, qty, berat);
-      
+
       // Refresh detail to get updated totals and items
       await fetchShipmentDetail(shipmentId);
       // Refresh available lots as stock decreased
       await fetchAvailableLots();
-      
+
       state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -179,12 +181,12 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
     state = state.copyWith(isLoading: true);
     try {
       await _repository.removeItemFromShipment(shipmentId, itemId);
-      
+
       // Refresh detail
       await fetchShipmentDetail(shipmentId);
       // Refresh available lots as stock returned
       await fetchAvailableLots();
-      
+
       state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -210,7 +212,7 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
       await _repository.cancelShipment(shipmentId);
       await refreshShipments();
       // Also refresh available lots because cancelled shipment returns stock
-      await fetchAvailableLots(); 
+      await fetchAvailableLots();
       state = state.copyWith(isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -242,4 +244,14 @@ final shipmentItemsProvider =
 final availableLotsForShipmentProvider = Provider<List<LotModel>>((ref) {
   final shipmentState = ref.watch(shipmentProvider);
   return shipmentState.availableLots;
+});
+
+// Provider untuk verify incoming shipment page
+final verifyShipmentDetailProvider =
+    FutureProvider.family<ShipmentDetailResponse, String>(
+        (ref, shipmentId) async {
+  final repository = ref.read(shipmentRepositoryProvider);
+  // Fetch shipment detail dari API
+  final detail = await repository.getShipmentDetail(shipmentId);
+  return detail;
 });

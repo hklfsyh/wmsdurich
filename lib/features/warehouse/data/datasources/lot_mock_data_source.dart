@@ -28,7 +28,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       qtySisa: 50,
       currentQty: 50,
       currentBerat: 125.5,
-      status: 'ready',
+      status: 'READY',
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
     );
 
@@ -44,7 +44,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       qtySisa: 40,
       currentQty: 40,
       currentBerat: 98.3,
-      status: 'ready',
+      status: 'READY',
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
     );
 
@@ -60,7 +60,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       qtySisa: 0,
       currentQty: 15,
       currentBerat: 0,
-      status: 'in_process',
+      status: 'IN_PROCESS',
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
     );
 
@@ -193,7 +193,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       qtySisa: 0,
       currentQty: 0,
       currentBerat: 0,
-      status: 'in_process',
+      status: 'IN_PROCESS',
       createdAt: DateTime.now(),
     );
 
@@ -206,7 +206,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       jenisDurianId: request.jenisDurianId,
       jenisDurianNama: jenisNama,
       kondisiBuah: request.kondisiBuah,
-      status: 'in_process',
+      status: 'IN_PROCESS',
     );
   }
 
@@ -315,7 +315,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       qtySisa: qtyTotal,
       currentQty: qtyTotal,
       currentBerat: beratTotal,
-      status: 'ready',
+      status: 'READY',
       createdAt: lot.createdAt,
     );
 
@@ -325,7 +325,7 @@ class LotMockDataSourceImpl implements LotRemoteDataSource {
       id: lotId,
       qtyTotal: qtyTotal,
       beratTotal: beratTotal,
-      status: 'ready',
+      status: 'READY',
     );
   }
 }
