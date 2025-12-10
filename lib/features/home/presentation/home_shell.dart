@@ -16,10 +16,11 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _previousIndex = 0;
 
-  List<Map<String, dynamic>> _getNavigationItems(bool isAdmin, bool isWarehouse, bool isSales) {
+  List<Map<String, dynamic>> _getNavigationItems(bool isCentralAdmin, bool isBranchAdmin, bool isWarehouse, bool isSales, bool isBranchSales) {
     final items = <Map<String, dynamic>>[];
 
-    if (isAdmin) {
+    // Menu Home: Admin Pusat & Admin Cabang
+    if (isCentralAdmin || isBranchAdmin) {
       items.add({
         'path': '/home',
         'item': BottomNavigationBarItem(
@@ -30,7 +31,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       });
     }
 
-    if (isAdmin || isWarehouse) {
+    // Menu Warehouse: 
+    // - Admin Pusat
+    // - Admin Cabang
+    // - Staff Warehouse
+    if (isCentralAdmin || isBranchAdmin || isWarehouse) {
       items.add({
         'path': '/home/warehouse',
         'item': BottomNavigationBarItem(
@@ -41,7 +46,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       });
     }
 
-    if (isAdmin || isSales) {
+    // Menu Sales:
+    // - Admin Pusat
+    // - Admin Cabang
+    // - Sales (Pusat/Cabang)
+    if (isCentralAdmin || isBranchAdmin || isSales) {
       items.add({
         'path': '/home/sales',
         'item': BottomNavigationBarItem(
@@ -60,19 +69,26 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
-    // Default roles jika belum load (secure fail-safe: hide sensitive tabs)
-    final bool isAdmin = user?.isAdmin ?? false;
+    // RBAC Roles
+    final bool isCentralAdmin = user?.isCentralAdmin ?? false;
+    final bool isBranchAdmin = user?.isBranchAdmin ?? false;
     final bool isWarehouse = user?.isWarehouse ?? false;
     final bool isSales = user?.isSales ?? false;
+    final bool isBranchSales = (user?.isSales ?? false) && (user?.hasLocation ?? false);
 
-    final navItems = _getNavigationItems(isAdmin, isWarehouse, isSales);
+    final navItems = _getNavigationItems(isCentralAdmin, isBranchAdmin, isWarehouse, isSales, isBranchSales);
     
     // Cari index berdasarkan URL saat ini
     final String location = GoRouterState.of(context).fullPath ?? '/home';
     int selectedIndex = navItems.indexWhere((element) => element['path'] == location);
     
-    // Jika route tidak ditemukan di tab (misal direct link), default ke 0
-    if (selectedIndex == -1) selectedIndex = 0;
+    // Jika route tidak ditemukan di tab (misal direct link), 
+    // Redirect ke tab pertama yang tersedia
+    if (selectedIndex == -1) {
+      selectedIndex = 0;
+      // Optional: Force redirect if current location is not in allowed tabs
+      // But GoRouter handles protection, this is just for BottomNav highlight
+    }
 
     // Tentukan arah slide
     final isSlideRight = selectedIndex > _previousIndex;

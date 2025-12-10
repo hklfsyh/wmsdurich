@@ -1,75 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/core/widgets/profile_dropdown.dart';
+import 'package:wms_durich/features/sales/data/models/sales_models.dart';
+import 'package:wms_durich/features/sales/presentation/providers/sales_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
+import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 
-class SalesPage extends StatefulWidget {
+class SalesPage extends ConsumerStatefulWidget {
   const SalesPage({super.key});
 
   @override
-  State<SalesPage> createState() => _SalesPageState();
+  ConsumerState<SalesPage> createState() => _SalesPageState();
 }
 
-class _SalesPageState extends State<SalesPage> {
+class _SalesPageState extends ConsumerState<SalesPage> {
   String _selectedFilter = 'all';
-  
-  // Demo data
-  final List<Map<String, dynamic>> _demoSales = [
-    {
-      'id': 'SALE_001',
-      'pengiriman_id': 'SHP_001',
-      'tujuan': 'Toko Buah Segar',
-      'berat_terjual': 150.5,
-      'harga_total': 25000000,
-      'tipe_jual': 'KILOAN',
-      'created_at': DateTime.now().subtract(const Duration(days: 1)),
-    },
-    {
-      'id': 'SALE_002',
-      'pengiriman_id': 'SHP_002',
-      'tujuan': 'Pasar Sentral',
-      'berat_terjual': 300.0,
-      'harga_total': 45000000,
-      'tipe_jual': 'BORONGAN',
-      'created_at': DateTime.now().subtract(const Duration(days: 2)),
-    },
-    {
-      'id': 'SALE_003',
-      'pengiriman_id': 'SHP_003',
-      'tujuan': 'Gudang Medan',
-      'berat_terjual': 200.8,
-      'harga_total': 32000000,
-      'tipe_jual': 'KILOAN',
-      'created_at': DateTime.now().subtract(const Duration(days: 3)),
-    },
-  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  void _loadData() {
+    ref.read(salesProvider.notifier).loadSales(
+      tipeJual: _selectedFilter == 'all' ? null : _selectedFilter
+    );
+    // Load shipments to resolve destination names and for dropdown
+    ref.read(shipmentProvider.notifier).refreshShipments();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final salesState = ref.watch(salesProvider);
+    final shipments = ref.watch(shipmentProvider).shipments;
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             const Text('Warehouse Management'),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.orange.shade300, width: 0.5),
-              ),
-              child: Text(
-                'DEMO',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade900,
-                ),
-              ),
-            ),
           ],
         ),
         automaticallyImplyLeading: false,
@@ -80,7 +57,7 @@ class _SalesPageState extends State<SalesPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await Future.delayed(const Duration(seconds: 1));
+          _loadData();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -90,11 +67,16 @@ class _SalesPageState extends State<SalesPage> {
             children: [
               _buildHeader(),
               const SizedBox(height: 24),
-              _buildStatisticsCards(),
+              _buildStatisticsCards(salesState.sales),
               const SizedBox(height: 24),
               _buildFilterSection(),
               const SizedBox(height: 16),
-              _buildSalesList(),
+              if (salesState.isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (salesState.error != null)
+                Center(child: Text('Error: ${salesState.error}'))
+              else
+                _buildSalesList(salesState.sales, shipments),
             ],
           ),
         ),
@@ -159,15 +141,15 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  Widget _buildStatisticsCards() {
-    final totalSales = _demoSales.length;
-    final totalRevenue = _demoSales.fold<double>(
+  Widget _buildStatisticsCards(List<SalesModel> sales) {
+    final totalSales = sales.length;
+    final totalRevenue = sales.fold<double>(
       0,
-      (sum, sale) => sum + (sale['harga_total'] as num).toDouble(),
+      (sum, sale) => sum + sale.hargaTotal,
     );
-    final totalBerat = _demoSales.fold<double>(
+    final totalBerat = sales.fold<double>(
       0,
-      (sum, sale) => sum + (sale['berat_terjual'] as num).toDouble(),
+      (sum, sale) => sum + sale.beratTerjual,
     );
 
     return Row(
@@ -278,6 +260,9 @@ class _SalesPageState extends State<SalesPage> {
       onSelected: (selected) {
         setState(() {
           _selectedFilter = value;
+          ref.read(salesProvider.notifier).loadSales(
+            tipeJual: _selectedFilter == 'all' ? null : _selectedFilter
+          );
         });
       },
       selectedColor: AppColors.primary.withOpacity(0.2),
@@ -289,12 +274,8 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  Widget _buildSalesList() {
-    final filteredSales = _selectedFilter == 'all'
-        ? _demoSales
-        : _demoSales.where((s) => s['tipe_jual'] == _selectedFilter).toList();
-
-    if (filteredSales.isEmpty) {
+  Widget _buildSalesList(List<SalesModel> sales, List<ShipmentModel> shipments) {
+    if (sales.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -302,7 +283,7 @@ class _SalesPageState extends State<SalesPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Riwayat Penjualan (${filteredSales.length})',
+          'Riwayat Penjualan (${sales.length})',
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -310,12 +291,12 @@ class _SalesPageState extends State<SalesPage> {
           ),
         ),
         const SizedBox(height: 12),
-        ...filteredSales.map((sale) => _buildSalesCard(sale)),
+        ...sales.map((sale) => _buildSalesCard(sale, shipments)),
       ],
     );
   }
 
-  Widget _buildSalesCard(Map<String, dynamic> sale) {
+  Widget _buildSalesCard(SalesModel sale, List<ShipmentModel> shipments) {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
     final currencyFormat = NumberFormat.currency(
       locale: 'id_ID',
@@ -323,12 +304,21 @@ class _SalesPageState extends State<SalesPage> {
       decimalDigits: 0,
     );
 
+    // Resolve shipment destination name
+    String tujuan = 'Unknown Destination';
+    try {
+      final shipment = shipments.firstWhere((s) => s.id == sale.pengirimanId);
+      tujuan = shipment.tujuan;
+    } catch (_) {
+      tujuan = 'Pengiriman ${sale.pengirimanId}';
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: InkWell(
-        onTap: () => _showSalesDetail(sale),
+        onTap: () => _showSalesDetail(sale, tujuan),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -355,7 +345,7 @@ class _SalesPageState extends State<SalesPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          sale['id'],
+                          sale.id,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -364,7 +354,7 @@ class _SalesPageState extends State<SalesPage> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Pengiriman: ${sale['pengiriman_id']}',
+                          'Pengiriman: ${sale.pengirimanId}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -373,7 +363,7 @@ class _SalesPageState extends State<SalesPage> {
                       ],
                     ),
                   ),
-                  _buildTipeJualBadge(sale['tipe_jual']),
+                  _buildTipeJualBadge(sale.tipeJual),
                 ],
               ),
               const SizedBox(height: 12),
@@ -391,7 +381,7 @@ class _SalesPageState extends State<SalesPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            sale['tujuan'],
+                            tujuan,
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppColors.textSecondary,
@@ -409,7 +399,7 @@ class _SalesPageState extends State<SalesPage> {
                             const Icon(LucideIcons.scale, size: 16, color: AppColors.textSecondary),
                             const SizedBox(width: 8),
                             Text(
-                              '${sale['berat_terjual']} kg',
+                              '${sale.beratTerjual} kg',
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -419,7 +409,7 @@ class _SalesPageState extends State<SalesPage> {
                           ],
                         ),
                         Text(
-                          currencyFormat.format(sale['harga_total']),
+                          currencyFormat.format(sale.hargaTotal),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -437,7 +427,7 @@ class _SalesPageState extends State<SalesPage> {
                   Icon(LucideIcons.clock, size: 14, color: Colors.grey.shade600),
                   const SizedBox(width: 4),
                   Text(
-                    dateFormat.format(sale['created_at']),
+                    dateFormat.format(sale.createdAt),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -525,36 +515,29 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  void _showSalesDetail(Map<String, dynamic> sale) {
+  void _showSalesDetail(SalesModel sale, String tujuan) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SalesDetailSheet(sale: sale),
+      builder: (context) => SalesDetailSheet(sale: sale, tujuan: tujuan),
     );
   }
 }
 
-class CreateSalesDialog extends StatefulWidget {
+class CreateSalesDialog extends ConsumerStatefulWidget {
   const CreateSalesDialog({super.key});
 
   @override
-  State<CreateSalesDialog> createState() => _CreateSalesDialogState();
+  ConsumerState<CreateSalesDialog> createState() => _CreateSalesDialogState();
 }
 
-class _CreateSalesDialogState extends State<CreateSalesDialog> {
+class _CreateSalesDialogState extends ConsumerState<CreateSalesDialog> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedShipmentId;
   String _selectedTipeJual = 'KILOAN';
   final _beratController = TextEditingController();
   final _hargaController = TextEditingController();
-
-  // Demo shipment yang sudah SHIPPED
-  final List<Map<String, String>> _demoShipments = [
-    {'id': 'SHP_004', 'tujuan': 'Toko Berkah'},
-    {'id': 'SHP_005', 'tujuan': 'Pasar Modern'},
-    {'id': 'SHP_006', 'tujuan': 'Distributor Jaya'},
-  ];
 
   @override
   void dispose() {
@@ -565,6 +548,12 @@ class _CreateSalesDialogState extends State<CreateSalesDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Only show shipments that are active (SHIPPED/SENDING)
+    // Filter logic can be improved based on business rules
+    final shipments = ref.watch(shipmentProvider).shipments
+        .where((s) => s.status == 'SENDING' || s.status == 'SHIPPED')
+        .toList();
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
@@ -614,10 +603,10 @@ class _CreateSalesDialogState extends State<CreateSalesDialog> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  items: _demoShipments.map((shipment) {
+                  items: shipments.map((shipment) {
                     return DropdownMenuItem(
-                      value: shipment['id'],
-                      child: Text('${shipment['id']} - ${shipment['tujuan']}'),
+                      value: shipment.id,
+                      child: Text('${shipment.id} - ${shipment.tujuan}'),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -725,26 +714,44 @@ class _CreateSalesDialogState extends State<CreateSalesDialog> {
     );
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invoice berhasil dibuat (Demo)'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      try {
+        await ref.read(salesProvider.notifier).createSales(
+          pengirimanId: _selectedShipmentId!,
+          beratTerjual: double.parse(_beratController.text),
+          hargaTotal: double.parse(_hargaController.text),
+          tipeJual: _selectedTipeJual,
+        );
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invoice berhasil dibuat'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat invoice: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
 
-class SalesDetailSheet extends StatelessWidget {
-  final Map<String, dynamic> sale;
+class SalesDetailSheet extends ConsumerWidget {
+  final SalesModel sale;
+  final String tujuan;
 
-  const SalesDetailSheet({super.key, required this.sale});
+  const SalesDetailSheet({super.key, required this.sale, required this.tujuan});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
     final currencyFormat = NumberFormat.currency(
       locale: 'id_ID',
@@ -791,7 +798,7 @@ class SalesDetailSheet extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        sale['id'],
+                        sale.id,
                         style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                       ),
                     ],
@@ -810,27 +817,27 @@ class SalesDetailSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildInfoRow('ID Pengiriman', sale['pengiriman_id'], LucideIcons.truck),
+                _buildInfoRow('ID Pengiriman', sale.pengirimanId, LucideIcons.truck),
                 const SizedBox(height: 12),
-                _buildInfoRow('Tujuan', sale['tujuan'], LucideIcons.mapPin),
+                _buildInfoRow('Tujuan', tujuan, LucideIcons.mapPin),
                 const SizedBox(height: 12),
                 _buildInfoRow(
                   'Berat Terjual',
-                  '${sale['berat_terjual']} kg',
+                  '${sale.beratTerjual} kg',
                   LucideIcons.scale,
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
                   'Total Harga',
-                  currencyFormat.format(sale['harga_total']),
+                  currencyFormat.format(sale.hargaTotal),
                   LucideIcons.dollarSign,
                 ),
                 const SizedBox(height: 12),
-                _buildInfoRow('Tipe Penjualan', sale['tipe_jual'], LucideIcons.tags),
+                _buildInfoRow('Tipe Penjualan', sale.tipeJual, LucideIcons.tags),
                 const SizedBox(height: 12),
                 _buildInfoRow(
                   'Tanggal',
-                  dateFormat.format(sale['created_at']),
+                  dateFormat.format(sale.createdAt),
                   LucideIcons.calendar,
                 ),
                 const SizedBox(height: 24),
@@ -839,9 +846,10 @@ class SalesDetailSheet extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {
+                          // TODO: Implement update dialog
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Fitur edit (Demo)')),
+                            const SnackBar(content: Text('Fitur edit belum diimplementasikan di UI')),
                           );
                         },
                         icon: const Icon(LucideIcons.edit),
@@ -855,13 +863,7 @@ class SalesDetailSheet extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Invoice void (Demo)'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          _confirmVoid(context, ref, sale.id);
                         },
                         icon: const Icon(LucideIcons.trash2),
                         label: const Text('Void'),
@@ -911,6 +913,42 @@ class SalesDetailSheet extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmVoid(BuildContext context, WidgetRef ref, String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batalkan Penjualan?'),
+        content: const Text('Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              try {
+                await ref.read(salesProvider.notifier).voidSales(id);
+                if (!context.mounted) return;
+                Navigator.pop(context); // Close sheet
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Penjualan berhasil dibatalkan')),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal: $e')),
+                );
+              }
+            },
+            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }

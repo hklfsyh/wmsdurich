@@ -3,19 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/core/network/dio_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_requests.dart';
+import 'package:wms_durich/features/warehouse/data/models/receive_shipment_request.dart';
 
 final shipmentRemoteDataSourceProvider = Provider<ShipmentRemoteDataSource>((ref) {
   return ShipmentRemoteDataSourceImpl(ref.read(dioProvider));
 });
 
 abstract class ShipmentRemoteDataSource {
-  Future<List<ShipmentModel>> getShipments({String? status});
+  Future<List<ShipmentModel>> getShipments({String? status, String? type});
   Future<ShipmentDetailResponse> getShipmentDetail(String id);
   Future<ShipmentModel> createShipment(CreateShipmentRequest request);
   Future<void> addItemToShipment(String id, AddItemToShipmentRequest request);
   Future<void> removeItemFromShipment(String id, String detailId);
   Future<void> finalizeShipment(String id);
   Future<void> updateShipmentStatus(String id, String status, {String? notes});
+  Future<void> receiveShipment(String id, ReceiveShipmentRequest request);
 }
 
 class ShipmentRemoteDataSourceImpl implements ShipmentRemoteDataSource {
@@ -24,11 +26,14 @@ class ShipmentRemoteDataSourceImpl implements ShipmentRemoteDataSource {
   ShipmentRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<List<ShipmentModel>> getShipments({String? status}) async {
+  Future<List<ShipmentModel>> getShipments({String? status, String? type}) async {
     try {
       final queryParams = <String, dynamic>{};
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;
+      }
+      if (type != null && type.isNotEmpty) {
+        queryParams['type'] = type;
       }
       
       final response = await _dio.get('/v1/shipments', queryParameters: queryParams);
@@ -108,6 +113,15 @@ class ShipmentRemoteDataSourceImpl implements ShipmentRemoteDataSource {
         if (notes != null) 'notes': notes,
       };
       await _dio.put('/v1/shipments/$id/status', data: data);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> receiveShipment(String id, ReceiveShipmentRequest request) async {
+    try {
+      await _dio.post('/v1/shipments/$id/receive', data: request.toJson());
     } catch (e) {
       rethrow;
     }

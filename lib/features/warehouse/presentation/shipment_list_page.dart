@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/shipment_detail_page.dart';
@@ -19,11 +20,35 @@ class ShipmentListPage extends ConsumerStatefulWidget {
 class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // Filter variables
+  String? _selectedStatus;
+  String? _selectedType; // Default to null (All Types) as per updated request
+
+  final List<String> _statusOptions = [
+    'DRAFT',
+    'SENDING',
+    'SHIPPED',
+    'RECEIVED',
+    'COMPLETED',
+    'CANCELLED'
+  ];
+
+  final List<Map<String, String>> _typeOptions = [
+    {'label': 'Barang Keluar (Outgoing)', 'value': 'outgoing'},
+    {'label': 'Barang Masuk (Incoming)', 'value': 'incoming'},
+  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Refresh data saat masuk halaman untuk memastikan filter default
+    // Hal ini penting karena shipmentProvider bersifat shared state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshShipments();
+    });
   }
 
   @override
@@ -51,7 +76,14 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
   }
 
   Future<void> _refreshShipments() async {
-    await ref.read(shipmentProvider.notifier).refreshShipments();
+    await ref.read(shipmentProvider.notifier).refreshShipments(
+      status: _selectedStatus,
+      type: _selectedType,
+    );
+  }
+  
+  void _onFilterChanged() {
+    _refreshShipments();
   }
 
   @override
@@ -59,6 +91,11 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
     final shipmentState = ref.watch(shipmentProvider);
     final draftShipments = shipmentState.draftShipments;
     final historyShipments = shipmentState.historyShipments;
+    
+    // RBAC: Check user type
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    final isCentralAdmin = user?.isCentralAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -68,13 +105,21 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          // Filter Button (Opens BottomSheet)
           IconButton(
-            icon: const Icon(LucideIcons.mapPin),
-            tooltip: 'Kelola Tujuan Pengiriman',
-            onPressed: () {
-              context.push('/home/warehouse/tujuan-pengiriman');
-            },
+            icon: const Icon(LucideIcons.filter),
+            tooltip: 'Filter Pengiriman',
+            onPressed: _showFilterBottomSheet,
           ),
+          // Hanya Admin Pusat yang bisa mengelola Tujuan Pengiriman
+          if (isCentralAdmin)
+            IconButton(
+              icon: const Icon(LucideIcons.mapPin),
+              tooltip: 'Kelola Tujuan Pengiriman',
+              onPressed: () {
+                context.push('/home/warehouse/tujuan-pengiriman');
+              },
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -125,6 +170,131 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
         label: const Text('Buat Pengiriman',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Filter Pengiriman',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Filter Tipe
+                  const Text('Tipe Pengiriman',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedType,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null, 
+                        child: Text('Semua Tipe'),
+                      ),
+                      ..._typeOptions.map((e) => DropdownMenuItem(
+                            value: e['value'],
+                            child: Text(e['label']!),
+                          )),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        _selectedType = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Filter Status
+                  const Text('Status',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedStatus,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null, 
+                        child: Text('Semua Status'),
+                      ),
+                      ..._statusOptions.map((e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e),
+                          )),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() {
+                        _selectedStatus = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              _selectedStatus = null;
+                              _selectedType = null; // Reset to default (All)
+                            });
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {}); // Trigger rebuild in parent
+                            _onFilterChanged(); // Refresh data
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Terapkan'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

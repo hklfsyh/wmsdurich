@@ -16,17 +16,35 @@ class IncomingShipmentsPage extends ConsumerStatefulWidget {
 }
 
 class _IncomingShipmentsPageState extends ConsumerState<IncomingShipmentsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch initial data when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshShipments();
+    });
+  }
+
   Future<void> _refreshShipments() async {
-    await ref.read(shipmentProvider.notifier).refreshShipments();
+    // Filter untuk Incoming Shipments:
+    // status=SENDING (yang sedang dikirim)
+    // type=incoming (yang masuk ke lokasi saya)
+    await ref.read(shipmentProvider.notifier).refreshShipments(
+      status: 'SENDING',
+      type: 'incoming',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final shipmentState = ref.watch(shipmentProvider);
-    // Filter pengiriman dengan status SENDING yang ditujukan ke lokasi admin
-    final incomingShipments = shipmentState.historyShipments
-        .where((s) => s.status == 'SENDING')
-        .toList();
+    // Data shipments sudah difilter oleh API call di _refreshShipments
+    // Namun kita perlu pastikan menggunakan data yang benar dari state.shipments
+    // Karena logic refreshShipments mengganti seluruh list shipments
+    
+    // Kita gunakan seluruh list shipments yang ada karena asumsi page ini
+    // dedicated dan melakukan fetch khusus saat dibuka/refresh
+    final incomingShipments = shipmentState.shipments;
 
     return Scaffold(
       appBar: AppBar(
@@ -115,14 +133,18 @@ class _IncomingShipmentsPageState extends ConsumerState<IncomingShipmentsPage> {
     final dateFormat = DateFormat('dd MMM yyyy, HH:mm');
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) =>
                 VerifyIncomingShipmentPage(shipmentId: shipment.id),
           ),
         );
+        
+        if (result == true) {
+          _refreshShipments();
+        }
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(

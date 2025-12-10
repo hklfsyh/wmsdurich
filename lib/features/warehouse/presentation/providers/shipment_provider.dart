@@ -52,36 +52,26 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
     _repository = ref.read(shipmentRepositoryProvider);
     _lotRepository = ref.read(lotRepositoryProvider);
 
-    // Initial fetch
-    _fetchInitialData();
-
+    // Remove _fetchInitialData() to prevent double fetch
+    // Pages (ShipmentListPage & IncomingShipmentsPage) are now responsible 
+    // for initiating the fetch with correct filters in their initState/build.
+    
     return ShipmentState(
       shipments: [],
       shipmentItems: {},
       availableLots: [],
-      isLoading: true,
+      // Don't set isLoading true initially, wait for explicit fetch
+      isLoading: false, 
     );
   }
 
-  Future<void> _fetchInitialData() async {
-    try {
-      final shipments = await _repository.getShipments();
-      state = state.copyWith(
-        shipments: shipments,
-        isLoading: false,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-    }
-  }
+  // Removed _fetchInitialData as it causes default fetch without filters
 
-  Future<void> refreshShipments() async {
+
+  Future<void> refreshShipments({String? status, String? type}) async {
     state = state.copyWith(isLoading: true);
     try {
-      final shipments = await _repository.getShipments();
+      final shipments = await _repository.getShipments(status: status, type: type);
       state = state.copyWith(
         shipments: shipments,
         isLoading: false,

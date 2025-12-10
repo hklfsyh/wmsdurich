@@ -30,11 +30,13 @@ class AuthRepositoryImpl implements AuthRepository {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
         roles: response.roles,
+        locationId: response.currentLocationId,
       );
 
       return UserEntity(
         accessToken: response.accessToken,
         roles: response.roles,
+        locationId: response.currentLocationId,
       );
     } catch (e) {
       rethrow;
@@ -58,9 +60,14 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserEntity?> getCurrentUser() async {
     final token = await storageService.getAccessToken();
     final roles = await storageService.getUserRoles();
+    final locationId = await storageService.getLocationId();
     
     if (token != null && token.isNotEmpty) {
-      return UserEntity(accessToken: token, roles: roles);
+      return UserEntity(
+        accessToken: token, 
+        roles: roles,
+        locationId: locationId,
+      );
     }
     return null;
   }

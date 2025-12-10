@@ -55,21 +55,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Role-based access control
-      final isAdmin = user.isAdmin;
+      final isCentralAdmin = user.isCentralAdmin;
+      final isBranchAdmin = user.isBranchAdmin;
       final isWarehouse = user.isWarehouse;
       final isSales = user.isSales;
 
-      // Admin bisa akses semua page
-      if (isAdmin) {
+      // 1. Admin Pusat: Bisa akses semua
+      if (isCentralAdmin) {
         return null;
       }
 
-      // Warehouse hanya bisa akses /home/warehouse
+      // 2. Admin Cabang: Bisa akses semua KECUALI Dashboard (/home)
+      if (isBranchAdmin) {
+        // Jika mencoba akses dashboard atau root home, redirect ke warehouse
+        if (path == '/home' || path == '/') {
+          return '/home/warehouse';
+        }
+        return null;
+      }
+
+      // 3. Warehouse Staff: Hanya /home/warehouse dan sub-routes
       if (isWarehouse && !path.startsWith('/home/warehouse') && path != '/settings') {
         return '/home/warehouse';
       }
 
-      // Sales hanya bisa akses /home/sales
+      // 4. Sales Staff: Hanya /home/sales dan sub-routes
       if (isSales && !path.startsWith('/home/sales') && path != '/settings') {
         return '/home/sales';
       }

@@ -56,7 +56,13 @@ class WarehousePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final warehouseDataAsync = ref.watch(warehouseDataProvider);
     final authState = ref.watch(authProvider);
-    final isAdmin = authState.user?.isAdmin ?? false;
+    final user = authState.user;
+    
+    // Logika UI:
+    // 1. User Cabang (Admin Cabang & Warehouse Cabang): Fokus menerima barang dari Pusat -> Tombol "Lot Sedang Dikirim"
+    // 2. User Pusat (Admin Pusat & Warehouse Pusat): Fokus input stok/panen -> Tombol "Add Lot Stock"
+    
+    final isBranchUser = user?.isBranchUser ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,9 +78,9 @@ class WarehousePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Tombol berdasarkan role
-            if (isAdmin)
-              // Tombol untuk Admin Cabang: Lihat Pengiriman Masuk
+            // 1. Tombol berdasarkan role (Cabang vs Pusat)
+            if (isBranchUser)
+              // Tombol untuk Cabang (Admin & Warehouse): Lihat Pengiriman Masuk (Verify Incoming)
               ElevatedButton.icon(
                 onPressed: () => _showIncomingShipmentsPage(context, ref),
                 icon: const Icon(LucideIcons.packageCheck,
@@ -91,7 +97,7 @@ class WarehousePage extends ConsumerWidget {
                 ),
               )
             else
-              // Tombol untuk Warehouse: Add Lot Stock
+              // Tombol untuk Pusat (Admin & Warehouse): Add Lot Stock
               ElevatedButton.icon(
                 onPressed: () => _showAddLotStockDialog(context),
                 icon: const Icon(LucideIcons.package,

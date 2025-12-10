@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/warehouse/data/models/receive_shipment_request.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
+import 'package:wms_durich/features/warehouse/data/repositories/shipment_repository.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
 
 class VerifyIncomingShipmentPage extends ConsumerStatefulWidget {
@@ -44,9 +46,14 @@ class _VerifyIncomingShipmentPageState
       _beratErrors.clear();
     });
 
+    final List<ReceiveShipmentItemRequest> itemsToReceive = [];
+
     for (var item in detail.items) {
       final qtyText = _qtyControllers[item.lotId]?.text.trim() ?? '';
       final beratText = _beratControllers[item.lotId]?.text.trim() ?? '';
+
+      int? verifiedQty;
+      double verifiedBerat = 0;
 
       if (qtyText.isEmpty) {
         setState(() {
@@ -54,8 +61,8 @@ class _VerifyIncomingShipmentPageState
         });
         hasError = true;
       } else {
-        final qty = int.tryParse(qtyText);
-        if (qty == null || qty <= 0) {
+        verifiedQty = int.tryParse(qtyText);
+        if (verifiedQty == null || verifiedQty <= 0) {
           setState(() {
             _qtyErrors[item.lotId] = 'Qty harus > 0';
           });
@@ -69,13 +76,23 @@ class _VerifyIncomingShipmentPageState
         });
         hasError = true;
       } else {
-        final berat = double.tryParse(beratText);
-        if (berat == null || berat <= 0) {
+        final parsedBerat = double.tryParse(beratText);
+        if (parsedBerat == null || parsedBerat <= 0) {
           setState(() {
             _beratErrors[item.lotId] = 'Berat harus > 0';
           });
           hasError = true;
+        } else {
+          verifiedBerat = parsedBerat;
         }
+      }
+
+      if (!hasError && verifiedQty != null) {
+        itemsToReceive.add(ReceiveShipmentItemRequest(
+          lotId: item.lotId,
+          beratDiterima: verifiedBerat,
+          qtyDiterima: verifiedQty,
+        ));
       }
     }
 
@@ -113,17 +130,12 @@ class _VerifyIncomingShipmentPageState
     setState(() => _isSubmitting = true);
 
     try {
-      // Simulate API call to verify and finalize
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      // Mock: Update lot status to READY and update current_location
-      // In real implementation, this would call:
-      // - PUT /v1/shipments/{id}/verify
-      // - Body: { lots: [{ lot_id, qty_verified, berat_verified }] }
-      // Backend will:
-      // 1. Update shipment status to COMPLETED
-      // 2. Update each lot status to READY
-      // 3. Update each lot current_location_id to admin's location
+      final repository = ref.read(shipmentRepositoryProvider);
+      await repository.receiveShipment(
+        widget.shipmentId,
+        DateTime.now(),
+        itemsToReceive,
+      );
 
       setState(() => _isSubmitting = false);
 
@@ -145,10 +157,13 @@ class _VerifyIncomingShipmentPageState
       }
     } catch (e) {
       setState(() => _isSubmitting = false);
+      // Extract error message if it's an Exception or DioException
+      final errorMessage = e.toString().replaceAll('Exception: ', '');
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error: $errorMessage'),
             backgroundColor: Colors.red,
           ),
         );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
+import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/tujuan_pengiriman_model.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/tujuan_pengiriman_provider.dart';
 
@@ -75,6 +76,11 @@ class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(tujuanPengirimanProvider);
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    
+    // Tombol CRUD hanya untuk Admin Pusat
+    final isCentralAdmin = user?.isCentralAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -92,9 +98,9 @@ class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
                 ? _buildErrorState(state.error!)
                 : state.tujuanList.isEmpty
                     ? _buildEmptyState()
-                    : _buildList(state.tujuanList),
+                    : _buildList(state.tujuanList, isCentralAdmin),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: isCentralAdmin ? FloatingActionButton.extended(
         onPressed: _showAddDialog,
         backgroundColor: AppColors.primary,
         icon: const Icon(LucideIcons.plus, color: Colors.white),
@@ -102,28 +108,28 @@ class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
           'Tambah Tujuan',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-      ),
+      ) : null,
     );
   }
 
-  Widget _buildList(List<TujuanPengirimanModel> tujuanList) {
+  Widget _buildList(List<TujuanPengirimanModel> tujuanList, bool isEditable) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: tujuanList.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final tujuan = tujuanList[index];
-        return _buildTujuanCard(tujuan);
+        return _buildTujuanCard(tujuan, isEditable);
       },
     );
   }
 
-  Widget _buildTujuanCard(TujuanPengirimanModel tujuan) {
+  Widget _buildTujuanCard(TujuanPengirimanModel tujuan, bool isEditable) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _showEditDialog(tujuan),
+        onTap: isEditable ? () => _showEditDialog(tujuan) : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -187,11 +193,12 @@ class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(LucideIcons.trash2, size: 20),
-                    color: Colors.red.shade400,
-                    onPressed: () => _confirmDelete(tujuan),
-                  ),
+                  if (isEditable)
+                    IconButton(
+                      icon: const Icon(LucideIcons.trash2, size: 20),
+                      color: Colors.red.shade400,
+                      onPressed: () => _confirmDelete(tujuan),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
