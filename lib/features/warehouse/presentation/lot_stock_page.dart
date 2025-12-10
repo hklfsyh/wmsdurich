@@ -6,11 +6,16 @@ import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_detail_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 
-class LotStockPage extends ConsumerWidget {
+class LotStockPage extends ConsumerStatefulWidget {
   const LotStockPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LotStockPage> createState() => _LotStockPageState();
+}
+
+class _LotStockPageState extends ConsumerState<LotStockPage> {
+  @override
+  Widget build(BuildContext context) {
     final readyLotsAsync = ref.watch(allReadyLotsProvider);
 
     return Scaffold(
@@ -26,7 +31,7 @@ class LotStockPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.statusSuccessLight,
+              color: AppColors.statusSuccessDark.withOpacity(0.1),
               border: Border(
                 bottom: BorderSide(color: Colors.grey.shade300),
               ),
@@ -111,7 +116,7 @@ class LotStockPage extends ConsumerWidget {
               loading: () => const Center(
                 child: CircularProgressIndicator(),
               ),
-              error: (error, stack) => _buildErrorState(error, ref),
+              error: (error, stack) => _buildErrorState(error),
             ),
           ),
         ],
@@ -125,7 +130,7 @@ class LotStockPage extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            LucideIcons.packageX,
+            LucideIcons.packageOpen,
             size: 64,
             color: Colors.grey.shade400,
           ),
@@ -151,12 +156,12 @@ class LotStockPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(Object error, WidgetRef ref) {
+  Widget _buildErrorState(Object error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
+          const Icon(
             LucideIcons.alertCircle,
             size: 64,
             color: AppColors.statusDangerDark,
@@ -195,6 +200,9 @@ class LotStockPage extends ConsumerWidget {
   }
 
   Widget _buildLotCard(BuildContext context, LotModel lot) {
+    const statusColor = AppColors.statusSuccessDark;
+    const bgColor = AppColors.statusSuccessLight;
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -208,7 +216,7 @@ class LotStockPage extends ConsumerWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.statusSuccessDark.withOpacity(0.3)),
+          border: Border.all(color: statusColor.withOpacity(0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -222,16 +230,16 @@ class LotStockPage extends ConsumerWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.statusSuccessLight,
+              decoration: const BoxDecoration(
+                color: bgColor,
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(12)),
+                    BorderRadius.vertical(top: Radius.circular(12)),
               ),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     LucideIcons.packageCheck,
-                    color: AppColors.statusSuccessDark,
+                    color: statusColor,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -263,7 +271,7 @@ class LotStockPage extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.statusSuccessDark,
+                      color: statusColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -305,26 +313,25 @@ class LotStockPage extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.statusSuccessLight.withOpacity(0.5),
+                color: bgColor.withOpacity(0.5),
                 borderRadius:
                     const BorderRadius.vertical(bottom: Radius.circular(12)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.eye, size: 16, color: AppColors.statusSuccessDark),
-                  const SizedBox(width: 8),
+                  Icon(LucideIcons.eye, size: 16, color: statusColor),
+                  SizedBox(width: 8),
                   Text(
                     'Lihat Detail',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.statusSuccessDark,
+                      color: statusColor,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Icon(LucideIcons.chevronRight,
-                      size: 16, color: AppColors.statusSuccessDark),
+                  SizedBox(width: 4),
+                  Icon(LucideIcons.chevronRight, size: 16, color: statusColor),
                 ],
               ),
             ),

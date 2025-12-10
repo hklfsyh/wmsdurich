@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
-import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_proses_page_new.dart';
+import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_proses_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_in_process_page.dart';
 
 class AddLotStockPage extends ConsumerWidget {

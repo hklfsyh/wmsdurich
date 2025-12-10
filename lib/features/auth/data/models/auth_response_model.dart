@@ -2,6 +2,7 @@ class AuthResponseModel {
   final String accessToken;
   final String refreshToken;
   final List<String> roles;
+  final String? currentLocationId;
   final int code;
   final bool success;
   final String message;
@@ -10,6 +11,7 @@ class AuthResponseModel {
     required this.accessToken,
     required this.refreshToken,
     required this.roles,
+    this.currentLocationId,
     required this.code,
     required this.success,
     required this.message,
@@ -42,6 +44,7 @@ class AuthResponseModel {
       roles: data['roles'] != null 
           ? List<String>.from(data['roles']) 
           : [],
+      currentLocationId: data['current_location_id'],
     );
   }
 }

@@ -1,5 +1,6 @@
 class ShipmentModel {
   final String id;
+  final String kode;
   final String tujuan;
   final DateTime tglKirim;
   final String status;
@@ -10,6 +11,7 @@ class ShipmentModel {
 
   ShipmentModel({
     required this.id,
+    required this.kode,
     required this.tujuan,
     required this.tglKirim,
     required this.status,
@@ -22,6 +24,7 @@ class ShipmentModel {
   factory ShipmentModel.fromJson(Map<String, dynamic> json) {
     return ShipmentModel(
       id: json['id'] ?? '',
+      kode: json['kode'] ?? '',
       tujuan: json['tujuan'] ?? '',
       tglKirim: json['tgl_kirim'] != null
           ? DateTime.parse(json['tgl_kirim'])
@@ -60,9 +63,9 @@ class ShipmentItemModel {
     return ShipmentItemModel(
       id: json['id'] ?? '',
       lotId: json['lot_id'] ?? '',
-      lotKode: json['lot_kode'] ?? '',
+      lotKode: json['kode_lot'] ?? '', // Updated per spec
       jenisDurian: json['jenis_durian'] ?? '',
-      kondisiBuah: json['kondisi_buah'] ?? '',
+      kondisiBuah: json['grade'] ?? '', // Updated per spec (grade -> kondisiBuah)
       qtyAmbil: json['qty_ambil'] ?? 0,
       beratAmbil: (json['berat_ambil'] ?? 0).toDouble(),
     );

@@ -48,6 +48,11 @@ final allReadyLotsProvider = FutureProvider<LotsResponse>((ref) async {
   return repository.getLots(status: 'READY');
 });
 
+final allEmptyLotsProvider = FutureProvider<LotsResponse>((ref) async {
+  final repository = ref.read(lotRepositoryProvider);
+  return repository.getLots(status: 'EMPTY');
+});
+
 final lotDetailProvider = FutureProvider.family<LotDetailResponse, String>((ref, lotId) async {
   final repository = ref.read(lotRepositoryProvider);
   return repository.getLotDetail(lotId);
@@ -115,6 +120,28 @@ class FinalizeLotController extends AsyncNotifier<FinalizeLotResponse?> {
       return await repository.finalizeLot(lotId, request);
     });
     return state.value;
+  }
+
+  void reset() {
+    state = const AsyncValue.data(null);
+  }
+}
+
+final removeItemFromLotControllerProvider =
+    AsyncNotifierProvider<RemoveItemFromLotController, void>(RemoveItemFromLotController.new);
+
+class RemoveItemFromLotController extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {
+    return;
+  }
+
+  Future<void> removeItem(String lotId, RemoveItemFromLotRequest request) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repository = ref.read(lotRepositoryProvider);
+      await repository.removeItemFromLot(lotId, request);
+    });
   }
 
   void reset() {

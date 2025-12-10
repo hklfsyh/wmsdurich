@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
+import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/widgets/add_item_to_shipment_dialog.dart';
 
 class ShipmentDetailPage extends ConsumerStatefulWidget {
@@ -19,12 +20,24 @@ class ShipmentDetailPage extends ConsumerStatefulWidget {
 class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
   bool _isFinalizingLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Fetch detail (including items) when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(shipmentProvider.notifier)
+          .fetchShipmentDetail(widget.shipmentId);
+    });
+  }
+
   void _showAddItemDialog() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AddItemToShipmentDialog(shipmentId: widget.shipmentId),
+      builder: (context) =>
+          AddItemToShipmentDialog(shipmentId: widget.shipmentId),
     );
   }
 
@@ -32,62 +45,169 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.statusDangerLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(LucideIcons.trash2, color: AppColors.statusDangerDark, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Text('Hapus Item', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Apakah Anda yakin ingin menghapus item ini dari muatan?'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.fieldBackground,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.package, size: 18, color: AppColors.textSecondary),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${item.lotKode} - ${item.jenisDurian}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          width: double.maxFinite,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header dengan gradient
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.statusDangerDark,
+                      AppColors.statusDangerDark.withOpacity(0.8),
+                    ],
                   ),
-                ],
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        LucideIcons.trash2,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Hapus Item',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Text(
+                      'Apakah Anda yakin ingin menghapus item ini dari muatan?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade800,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueLight.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.blueDark.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.blueDark.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              LucideIcons.package,
+                              size: 20,
+                              color: AppColors.blueDark,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.lotKode,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item.jenisDurian,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Batal',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.statusDangerDark,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Hapus',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.statusDangerDark,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
       ),
     );
 
@@ -102,7 +222,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
+                const Icon(LucideIcons.checkCircle,
+                    color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Text('Item ${item.lotKode} berhasil dihapus'),
               ],
@@ -137,92 +258,180 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.statusSuccessLight,
-                borderRadius: BorderRadius.circular(8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          width: double.maxFinite,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header dengan gradient
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.statusSuccessDark,
+                      AppColors.statusSuccessDark.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        LucideIcons.truck,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Kirim Sekarang?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(LucideIcons.truck, color: AppColors.statusSuccessDark, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Text('Kirim Sekarang?', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Setelah dikirim, stok akan dipotong dan pengiriman tidak dapat diubah lagi.',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.blueLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(LucideIcons.mapPin, size: 16, color: AppColors.blueDark),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment?.tujuan ?? '-',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.blueDark,
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Text(
+                      'Setelah dikirim, stok akan dipotong dan pengiriman tidak dapat diubah lagi.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade800,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.blueLight.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.blueDark.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(LucideIcons.mapPin,
+                                  size: 18, color: AppColors.blueDark),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  shipment?.tujuan ?? '-',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: AppColors.blueDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(LucideIcons.package,
+                                  size: 18, color: AppColors.blueDark),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${items.length} Lot',
+                                style: const TextStyle(
+                                  color: AppColors.blueDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              const Icon(LucideIcons.scale,
+                                  size: 18, color: AppColors.blueDark),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${shipment?.totalBerat.toStringAsFixed(1)} kg',
+                                style: const TextStyle(
+                                  color: AppColors.blueDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Batal',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(LucideIcons.package, size: 16, color: AppColors.blueDark),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${items.length} Lot',
-                        style: const TextStyle(color: AppColors.blueDark),
-                      ),
-                      const SizedBox(width: 16),
-                      const Icon(LucideIcons.scale, size: 16, color: AppColors.blueDark),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${shipment?.totalBerat.toStringAsFixed(1)} kg',
-                        style: const TextStyle(color: AppColors.blueDark),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.statusSuccessDark,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(LucideIcons.truck,
+                                size: 18, color: Colors.white),
+                            label: const Text(
+                              'Kirim',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.statusSuccessDark,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(LucideIcons.truck, size: 18),
-            label: const Text('Kirim'),
-          ),
-        ],
       ),
     );
 
@@ -230,7 +439,10 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
       setState(() => _isFinalizingLoading = true);
 
       try {
-        await ref.read(shipmentProvider.notifier).finalizeShipment(widget.shipmentId);
+        await ref
+            .read(shipmentProvider.notifier)
+            .finalizeShipment(widget.shipmentId);
+        ref.invalidate(warehouseDataProvider);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -267,57 +479,191 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.statusDangerLight,
-                borderRadius: BorderRadius.circular(8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          width: double.maxFinite,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header dengan gradient
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.statusDangerDark,
+                      AppColors.statusDangerDark.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        LucideIcons.xCircle,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Batalkan Pengiriman?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(LucideIcons.xCircle, color: AppColors.statusDangerDark, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Text('Batalkan Pengiriman?', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: const Text(
-          'Apakah Anda yakin ingin membatalkan draft pengiriman ini? Semua item muatan akan dikembalikan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Tidak', style: TextStyle(color: AppColors.textSecondary)),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Text(
+                      'Apakah Anda yakin ingin membatalkan draft pengiriman ini?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade800,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            LucideIcons.info,
+                            size: 18,
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Semua item muatan akan dikembalikan',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Tidak',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.statusDangerDark,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Ya, Batalkan',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.statusDangerDark,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Ya, Batalkan'),
-          ),
-        ],
+        ),
       ),
     );
 
     if (confirmed == true) {
-      await ref.read(shipmentProvider.notifier).cancelShipment(widget.shipmentId);
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Pengiriman berhasil dibatalkan'),
-              ],
+      try {
+        await ref
+            .read(shipmentProvider.notifier)
+            .cancelShipment(widget.shipmentId);
+
+        if (mounted) {
+          // Navigate back first
+          Navigator.pop(context);
+
+          // Then show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('Pengiriman berhasil dibatalkan'),
+                ],
+              ),
+              backgroundColor: AppColors.statusSuccessDark,
             ),
-            backgroundColor: AppColors.statusDangerDark,
-          ),
-        );
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(LucideIcons.alertCircle,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Gagal membatalkan: $e'),
+                ],
+              ),
+              backgroundColor: AppColors.statusDangerDark,
+            ),
+          );
+        }
       }
     }
   }
@@ -350,7 +696,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
           if (isDraft)
             PopupMenuButton<String>(
               icon: const Icon(LucideIcons.moreVertical),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onSelected: (value) {
                 if (value == 'cancel') {
                   _cancelShipment();
@@ -361,9 +708,11 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                   value: 'cancel',
                   child: Row(
                     children: [
-                      Icon(LucideIcons.xCircle, size: 18, color: AppColors.statusDangerDark),
+                      Icon(LucideIcons.xCircle,
+                          size: 18, color: AppColors.statusDangerDark),
                       SizedBox(width: 12),
-                      Text('Batalkan Draft', style: TextStyle(color: AppColors.statusDangerDark)),
+                      Text('Batalkan Draft',
+                          style: TextStyle(color: AppColors.statusDangerDark)),
                     ],
                   ),
                 ),
@@ -388,7 +737,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
     );
   }
 
-  Widget _buildHeaderCard(ShipmentModel shipment, Color statusColor, DateFormat dateFormat) {
+  Widget _buildHeaderCard(
+      ShipmentModel shipment, Color statusColor, DateFormat dateFormat) {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -409,7 +759,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.1),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
@@ -431,7 +782,7 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        shipment.id,
+                        shipment.kode,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -439,7 +790,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: statusColor,
                           borderRadius: BorderRadius.circular(20),
@@ -475,13 +827,6 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                   label: 'Tanggal Kirim',
                   value: dateFormat.format(shipment.tglKirim),
                   color: AppColors.orangeDark,
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  icon: LucideIcons.user,
-                  label: 'Dibuat Oleh',
-                  value: shipment.createdBy ?? '-',
-                  color: AppColors.textSecondary,
                 ),
               ],
             ),
@@ -534,7 +879,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
     );
   }
 
-  Widget _buildSummaryRow(ShipmentModel shipment, List<ShipmentItemModel> items) {
+  Widget _buildSummaryRow(
+      ShipmentModel shipment, List<ShipmentItemModel> items) {
     final totalQty = items.fold<int>(0, (sum, item) => sum + item.qtyAmbil);
 
     return Container(
@@ -651,27 +997,13 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
           const SizedBox(height: 8),
           Text(
             isDraft
-                ? 'Tap tombol "Tambah Item" untuk memuat Lot'
+                ? 'Tap tombol "Tambah Item" di bawah untuk memuat Lot'
                 : 'Pengiriman ini tidak memiliki item',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
             ),
           ),
-          if (isDraft) ...[
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _showAddItemDialog,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              icon: const Icon(LucideIcons.plus, size: 18),
-              label: const Text('Tambah Item'),
-            ),
-          ],
         ],
       ),
     );
@@ -694,15 +1026,6 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                   color: Colors.grey.shade800,
                 ),
               ),
-              if (isDraft)
-                TextButton.icon(
-                  onPressed: _showAddItemDialog,
-                  icon: const Icon(LucideIcons.plus, size: 16),
-                  label: const Text('Tambah'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                  ),
-                ),
             ],
           ),
         ),
@@ -741,12 +1064,14 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: AppColors.blueLight.withOpacity(0.5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.blueDark,
                     borderRadius: BorderRadius.circular(6),
@@ -789,7 +1114,8 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                     icon: const Icon(LucideIcons.trash2, size: 18),
                     color: AppColors.statusDangerDark,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints:
+                        const BoxConstraints(minWidth: 36, minHeight: 36),
                   ),
               ],
             ),
@@ -885,28 +1211,34 @@ class _ShipmentDetailPageState extends ConsumerState<ShipmentDetailPage> {
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: items.isEmpty || _isFinalizingLoading ? null : _finalizeShipment,
+              onPressed: items.isEmpty || _isFinalizingLoading
+                  ? null
+                  : _finalizeShipment,
               icon: _isFinalizingLoading
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(LucideIcons.truck, size: 18),
-              label: Text(_isFinalizingLoading ? 'Memproses...' : 'Kirim Sekarang'),
+              label: Text(
+                  _isFinalizingLoading ? 'Memproses...' : 'Kirim Sekarang'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.statusSuccessDark,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey.shade400,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),

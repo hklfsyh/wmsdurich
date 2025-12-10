@@ -29,9 +29,9 @@ final dioProvider = Provider<Dio>((ref) {
   // Configure adapter for web if needed
   configureWebAdapter(dio);
 
-  // Tambahkan AuthInterceptor (otomatis nambah Bearer token)
+  // Tambahkan AuthInterceptor (otomatis nambah Bearer token + refresh token)
   final storageService = ref.read(storageServiceProvider);
-  dio.interceptors.add(AuthInterceptor(storageService));
+  dio.interceptors.add(AuthInterceptor(storageService, dio));
 
   return dio;
 });

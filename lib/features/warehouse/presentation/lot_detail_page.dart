@@ -54,7 +54,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     });
 
     try {
-      final request = FinalizeLotRequest(beratAwal: berat);
+      final request = FinalizeLotRequest();
       final result = await ref
           .read(finalizeLotControllerProvider.notifier)
           .finalize(widget.lotId, request);
@@ -194,29 +194,37 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final items = detail.items;
     final isReady = header.status == 'READY';
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeaderCard(header),
-                const SizedBox(height: 16),
-                _buildInfoSection(header),
-                const SizedBox(height: 16),
-                _buildItemsSection(items),
-                if (!isReady) ...[
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(lotDetailProvider(widget.lotId));
+        // Wait for the provider to refresh
+        await Future.delayed(const Duration(milliseconds: 500));
+      },
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeaderCard(header),
                   const SizedBox(height: 16),
-                  _buildFinalizeSection(header),
+                  _buildInfoSection(header),
+                  const SizedBox(height: 16),
+                  _buildItemsSection(items),
+                  if (!isReady) ...[
+                    const SizedBox(height: 16),
+                    _buildFinalizeSection(header),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-        if (!isReady) _buildBottomButton(header),
-      ],
+          if (!isReady) _buildBottomButton(header),
+        ],
+      ),
     );
   }
 
@@ -344,7 +352,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                 child: _buildInfoItem(
                   icon: LucideIcons.hash,
                   label: header.status == 'DRAFT' ? 'Qty Saat Ini' : 'Qty Awal',
-                  value: '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} buah',
+                  value:
+                      '${header.status == 'DRAFT' ? header.currentQty : header.qtyAwal} buah',
                   color: AppColors.primary,
                 ),
               ),
@@ -526,7 +535,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Icon(LucideIcons.calendar,
                         size: 12, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
@@ -535,6 +544,22 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(LucideIcons.scale,
+                        size: 12, color: Colors.green.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${item.berat.toStringAsFixed(1)} kg',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade700,
                       ),
                     ),
                   ],

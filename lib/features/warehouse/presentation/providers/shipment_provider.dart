@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
+import 'package:wms_durich/features/warehouse/data/repositories/shipment_repository.dart';
+import 'package:wms_durich/features/warehouse/data/repositories/lot_repository.dart';
 
 // State class for managing shipments
 class ShipmentState {
@@ -42,172 +44,102 @@ class ShipmentState {
 }
 
 class ShipmentNotifier extends Notifier<ShipmentState> {
+  late final ShipmentRepository _repository;
+  late final LotRepository _lotRepository;
+
   @override
   ShipmentState build() {
+    _repository = ref.read(shipmentRepositoryProvider);
+    _lotRepository = ref.read(lotRepositoryProvider);
+
+    // Remove _fetchInitialData() to prevent double fetch
+    // Pages (ShipmentListPage & IncomingShipmentsPage) are now responsible 
+    // for initiating the fetch with correct filters in their initState/build.
+    
     return ShipmentState(
-      shipments: _getDummyShipments(),
-      shipmentItems: _getDummyShipmentItems(),
-      availableLots: _getDummyAvailableLots(),
+      shipments: [],
+      shipmentItems: {},
+      availableLots: [],
+      // Don't set isLoading true initially, wait for explicit fetch
+      isLoading: false, 
     );
   }
 
-  List<ShipmentModel> _getDummyShipments() {
-    return [
-      ShipmentModel(
-        id: 'SHIP001',
-        tujuan: 'Gudang Jakarta Pusat',
-        tglKirim: DateTime.now(),
-        status: 'DRAFT',
-        totalItems: 2,
-        totalBerat: 150.5,
-        createdBy: 'Admin',
-        createdAt: DateTime.now(),
-      ),
-      ShipmentModel(
-        id: 'SHIP002',
-        tujuan: 'Toko Bandung',
-        tglKirim: DateTime.now().subtract(const Duration(days: 1)),
-        status: 'SENDING',
-        totalItems: 3,
-        totalBerat: 220.0,
-        createdBy: 'Admin',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      ShipmentModel(
-        id: 'SHIP003',
-        tujuan: 'Gudang Surabaya',
-        tglKirim: DateTime.now().subtract(const Duration(days: 3)),
-        status: 'COMPLETED',
-        totalItems: 5,
-        totalBerat: 450.0,
-        createdBy: 'Warehouse',
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ];
+  // Removed _fetchInitialData as it causes default fetch without filters
+
+
+  Future<void> refreshShipments({String? status, String? type}) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final shipments = await _repository.getShipments(status: status, type: type);
+      state = state.copyWith(
+        shipments: shipments,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
   }
 
-  Map<String, List<ShipmentItemModel>> _getDummyShipmentItems() {
-    return {
-      'SHIP001': [
-        ShipmentItemModel(
-          id: 'ITEM001',
-          lotId: 'LOT001',
-          lotKode: 'LOT-2024-001',
-          jenisDurian: 'Musang King',
-          kondisiBuah: 'Segar',
-          qtyAmbil: 50,
-          beratAmbil: 75.5,
-        ),
-        ShipmentItemModel(
-          id: 'ITEM002',
-          lotId: 'LOT002',
-          lotKode: 'LOT-2024-002',
-          jenisDurian: 'Monthong',
-          kondisiBuah: 'Segar',
-          qtyAmbil: 40,
-          beratAmbil: 75.0,
-        ),
-      ],
-      'SHIP002': [
-        ShipmentItemModel(
-          id: 'ITEM003',
-          lotId: 'LOT003',
-          lotKode: 'LOT-2024-003',
-          jenisDurian: 'Bawor',
-          kondisiBuah: 'Matang',
-          qtyAmbil: 30,
-          beratAmbil: 80.0,
-        ),
-      ],
-    };
+  Future<void> fetchShipmentDetail(String id) async {
+    try {
+      final detail = await _repository.getShipmentDetail(id);
+
+      // Update shipments list with latest header info
+      final updatedShipments = state.shipments.map((s) {
+        return s.id == id ? detail.header : s;
+      }).toList();
+
+      // If not in list (e.g. just created or filtered out), add it
+      if (!updatedShipments.any((s) => s.id == id)) {
+        updatedShipments.add(detail.header);
+      }
+
+      // Update items map
+      final updatedItems =
+          Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
+      updatedItems[id] = detail.items;
+
+      state = state.copyWith(
+        shipments: updatedShipments,
+        shipmentItems: updatedItems,
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
   }
 
-  List<LotModel> _getDummyAvailableLots() {
-    return [
-      LotModel(
-        id: 'LOT004',
-        kode: 'LOT-2024-004',
-        jenisDurianId: 'JD001',
-        jenisDurianNama: 'Musang King',
-        kondisiBuah: 'Segar',
-        beratAwal: 200.0,
-        qtyAwal: 100,
-        beratSisa: 180.0,
-        qtySisa: 85,
-        currentQty: 85,
-        status: 'READY',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      LotModel(
-        id: 'LOT005',
-        kode: 'LOT-2024-005',
-        jenisDurianId: 'JD002',
-        jenisDurianNama: 'Monthong',
-        kondisiBuah: 'Matang',
-        beratAwal: 150.0,
-        qtyAwal: 80,
-        beratSisa: 150.0,
-        qtySisa: 80,
-        currentQty: 80,
-        status: 'READY',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      LotModel(
-        id: 'LOT006',
-        kode: 'LOT-2024-006',
-        jenisDurianId: 'JD003',
-        jenisDurianNama: 'Bawor',
-        kondisiBuah: 'Segar',
-        beratAwal: 250.0,
-        qtyAwal: 120,
-        beratSisa: 200.0,
-        qtySisa: 95,
-        currentQty: 95,
-        status: 'READY',
-        createdAt: DateTime.now(),
-      ),
-      LotModel(
-        id: 'LOT007',
-        kode: 'LOT-2024-007',
-        jenisDurianId: 'JD001',
-        jenisDurianNama: 'Musang King',
-        kondisiBuah: 'Matang',
-        beratAwal: 180.0,
-        qtyAwal: 90,
-        beratSisa: 180.0,
-        qtySisa: 90,
-        currentQty: 90,
-        status: 'READY',
-        createdAt: DateTime.now(),
-      ),
-    ];
+  Future<void> fetchAvailableLots() async {
+    try {
+      final response = await _lotRepository.getLots(status: 'READY');
+      state = state.copyWith(availableLots: response.data);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
   }
 
   Future<ShipmentModel> createShipment({
-    required String tujuan,
+    required String tujuanId,
     required DateTime tglKirim,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    state = state.copyWith(isLoading: true);
+    try {
+      final newShipment = await _repository.createShipment(tujuanId, tglKirim);
 
-    final newId = 'SHIP${DateTime.now().millisecondsSinceEpoch}';
-    final newShipment = ShipmentModel(
-      id: newId,
-      tujuan: tujuan,
-      tglKirim: tglKirim,
-      status: 'DRAFT',
-      totalItems: 0,
-      totalBerat: 0,
-      createdBy: 'User',
-      createdAt: DateTime.now(),
-    );
+      // Add to list
+      state = state.copyWith(
+        shipments: [newShipment, ...state.shipments],
+        shipmentItems:
+            Map<String, List<ShipmentItemModel>>.from(state.shipmentItems)
+              ..[newShipment.id] = [],
+        isLoading: false,
+      );
 
-    state = state.copyWith(
-      shipments: [...state.shipments, newShipment],
-      shipmentItems: Map<String, List<ShipmentItemModel>>.from(state.shipmentItems)
-        ..[newId] = [],
-    );
-
-    return newShipment;
+      return newShipment;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> addItemToShipment({
@@ -216,134 +148,66 @@ class ShipmentNotifier extends Notifier<ShipmentState> {
     required int qty,
     required double berat,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repository.addItemToShipment(shipmentId, lot.id, qty, berat);
 
-    final newItem = ShipmentItemModel(
-      id: 'ITEM${DateTime.now().millisecondsSinceEpoch}',
-      lotId: lot.id,
-      lotKode: lot.kode,
-      jenisDurian: lot.jenisDurianNama,
-      kondisiBuah: lot.kondisiBuah,
-      qtyAmbil: qty,
-      beratAmbil: berat,
-    );
+      // Refresh detail to get updated totals and items
+      await fetchShipmentDetail(shipmentId);
+      // Refresh available lots as stock decreased
+      await fetchAvailableLots();
 
-    final currentItems = state.shipmentItems[shipmentId] ?? [];
-    final updatedItems = Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
-    updatedItems[shipmentId] = [...currentItems, newItem];
-
-    final updatedShipments = state.shipments.map((s) {
-      if (s.id == shipmentId) {
-        return ShipmentModel(
-          id: s.id,
-          tujuan: s.tujuan,
-          tglKirim: s.tglKirim,
-          status: s.status,
-          totalItems: s.totalItems + 1,
-          totalBerat: s.totalBerat + berat,
-          createdBy: s.createdBy,
-          createdAt: s.createdAt,
-        );
-      }
-      return s;
-    }).toList();
-
-    state = state.copyWith(
-      shipments: updatedShipments,
-      shipmentItems: updatedItems,
-    );
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> removeItemFromShipment({
     required String shipmentId,
     required String itemId,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repository.removeItemFromShipment(shipmentId, itemId);
 
-    final currentItems = state.shipmentItems[shipmentId] ?? [];
-    final removedItem = currentItems.firstWhere((i) => i.id == itemId);
-    final updatedItemsList = currentItems.where((i) => i.id != itemId).toList();
+      // Refresh detail
+      await fetchShipmentDetail(shipmentId);
+      // Refresh available lots as stock returned
+      await fetchAvailableLots();
 
-    final updatedItems = Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
-    updatedItems[shipmentId] = updatedItemsList;
-
-    final updatedShipments = state.shipments.map((s) {
-      if (s.id == shipmentId) {
-        return ShipmentModel(
-          id: s.id,
-          tujuan: s.tujuan,
-          tglKirim: s.tglKirim,
-          status: s.status,
-          totalItems: s.totalItems - 1,
-          totalBerat: s.totalBerat - removedItem.beratAmbil,
-          createdBy: s.createdBy,
-          createdAt: s.createdAt,
-        );
-      }
-      return s;
-    }).toList();
-
-    state = state.copyWith(
-      shipments: updatedShipments,
-      shipmentItems: updatedItems,
-    );
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> finalizeShipment(String shipmentId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    final updatedShipments = state.shipments.map((s) {
-      if (s.id == shipmentId) {
-        return ShipmentModel(
-          id: s.id,
-          tujuan: s.tujuan,
-          tglKirim: s.tglKirim,
-          status: 'SENDING',
-          totalItems: s.totalItems,
-          totalBerat: s.totalBerat,
-          createdBy: s.createdBy,
-          createdAt: s.createdAt,
-        );
-      }
-      return s;
-    }).toList();
-
-    state = state.copyWith(shipments: updatedShipments);
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repository.finalizeShipment(shipmentId);
+      await refreshShipments();
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 
   Future<void> cancelShipment(String shipmentId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final updatedShipments = state.shipments.map((s) {
-      if (s.id == shipmentId) {
-        return ShipmentModel(
-          id: s.id,
-          tujuan: s.tujuan,
-          tglKirim: s.tglKirim,
-          status: 'CANCELLED',
-          totalItems: s.totalItems,
-          totalBerat: s.totalBerat,
-          createdBy: s.createdBy,
-          createdAt: s.createdAt,
-        );
-      }
-      return s;
-    }).toList();
-
-    state = state.copyWith(shipments: updatedShipments);
-  }
-
-  Future<void> deleteShipment(String shipmentId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final updatedShipments = state.shipments.where((s) => s.id != shipmentId).toList();
-    final updatedItems = Map<String, List<ShipmentItemModel>>.from(state.shipmentItems);
-    updatedItems.remove(shipmentId);
-
-    state = state.copyWith(
-      shipments: updatedShipments,
-      shipmentItems: updatedItems,
-    );
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repository.cancelShipment(shipmentId);
+      await refreshShipments();
+      // Also refresh available lots because cancelled shipment returns stock
+      await fetchAvailableLots();
+      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
+    }
   }
 }
 
@@ -370,4 +234,14 @@ final shipmentItemsProvider =
 final availableLotsForShipmentProvider = Provider<List<LotModel>>((ref) {
   final shipmentState = ref.watch(shipmentProvider);
   return shipmentState.availableLots;
+});
+
+// Provider untuk verify incoming shipment page
+final verifyShipmentDetailProvider =
+    FutureProvider.family<ShipmentDetailResponse, String>(
+        (ref, shipmentId) async {
+  final repository = ref.read(shipmentRepositoryProvider);
+  // Fetch shipment detail dari API
+  final detail = await repository.getShipmentDetail(shipmentId);
+  return detail;
 });
