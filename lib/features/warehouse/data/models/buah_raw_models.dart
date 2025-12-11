@@ -65,6 +65,7 @@ class BuahRawItem {
   final String pohonPanen;
   final String tglPanen;
   final bool isSorted;
+  final String? kodeLot;
   final DateTime createdAt;
 
   BuahRawItem({
@@ -75,6 +76,7 @@ class BuahRawItem {
     required this.pohonPanen,
     required this.tglPanen,
     required this.isSorted,
+    this.kodeLot,
     required this.createdAt,
   });
 
@@ -87,6 +89,7 @@ class BuahRawItem {
       pohonPanen: json['pohon_panen'] ?? '',
       tglPanen: json['tgl_panen'] ?? '',
       isSorted: json['is_sorted'] ?? false,
+      kodeLot: json['kode_lot'],
       createdAt: DateTime.parse(json['created_at']),
     );
   }

@@ -39,14 +39,15 @@ class TujuanPengirimanNotifier extends StateNotifier<TujuanPengirimanState> {
 
   TujuanPengirimanNotifier(this._repository)
       : super(TujuanPengirimanState()) {
+    // Don't load automatically on init if we want to filter by default or let UI decide
     loadTujuanPengiriman();
   }
 
-  Future<void> loadTujuanPengiriman() async {
+  Future<void> loadTujuanPengiriman({String? tipe}) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final tujuanList = await _repository.getTujuanPengirimanList();
+      final tujuanList = await _repository.getTujuanPengirimanList(tipe: tipe);
       state = state.copyWith(
         tujuanList: tujuanList,
         isLoading: false,
@@ -59,8 +60,8 @@ class TujuanPengirimanNotifier extends StateNotifier<TujuanPengirimanState> {
     }
   }
 
-  Future<void> refreshTujuanPengiriman() async {
-    await loadTujuanPengiriman();
+  Future<void> refreshTujuanPengiriman({String? tipe}) async {
+    await loadTujuanPengiriman(tipe: tipe);
   }
 
   Future<TujuanPengirimanModel> createTujuanPengiriman({

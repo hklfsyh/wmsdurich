@@ -8,6 +8,8 @@ class ShipmentModel {
   final double totalBerat;
   final String? createdBy;
   final DateTime createdAt;
+  final String? type; // 'incoming' or 'outgoing'
+  final String? tujuanType; // 'internal' or 'external'
 
   ShipmentModel({
     required this.id,
@@ -19,6 +21,8 @@ class ShipmentModel {
     required this.totalBerat,
     this.createdBy,
     required this.createdAt,
+    this.type,
+    this.tujuanType,
   });
 
   factory ShipmentModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +40,8 @@ class ShipmentModel {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      type: json['type'],
+      tujuanType: json['tujuan_type'],
     );
   }
 }

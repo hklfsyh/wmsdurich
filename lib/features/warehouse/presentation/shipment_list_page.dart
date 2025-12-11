@@ -37,6 +37,8 @@ class _ShipmentListPageState extends ConsumerState<ShipmentListPage>
   final List<Map<String, String>> _typeOptions = [
     {'label': 'Barang Keluar (Outgoing)', 'value': 'outgoing'},
     {'label': 'Barang Masuk (Incoming)', 'value': 'incoming'},
+    {'label': 'External', 'value': 'external'},
+    {'label': 'Internal', 'value': 'internal'},
   ];
 
   @override

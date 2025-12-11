@@ -31,6 +31,9 @@ class LotRemoteDataSourceImpl implements LotRemoteDataSource {
       final queryParams = <String, dynamic>{};
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;
+        if (status == 'READY') {
+          queryParams['scope'] = 'local';
+        }
       }
       if (jenisDurianId != null && jenisDurianId.isNotEmpty) {
         queryParams['jenis_durian_id'] = jenisDurianId;

@@ -360,10 +360,10 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
             columns: const [
               DataColumn(label: Text('No', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Kode Buah', style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text('Kode Lot', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Jenis', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Pohon', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
               DataColumn(label: Text('Tgl Panen', style: TextStyle(fontWeight: FontWeight.bold))),
             ],
             rows: List.generate(response.data.length, (index) {
@@ -379,6 +379,16 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                     child: Text(
                       item.kodeBuah,
                       style: const TextStyle(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 150),
+                    child: Text(
+                      item.kodeLot ?? '-',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -410,23 +420,6 @@ class _ListBuahPageState extends ConsumerState<ListBuahPage> {
                   ),
                 ),
                 DataCell(Text(item.pohonPanen)),
-                DataCell(
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: item.isSorted ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      item.isSorted ? 'Sorted' : 'Unsorted',
-                      style: TextStyle(
-                        color: item.isSorted ? Colors.green : Colors.orange,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
                 DataCell(Text(_formatDate(item.tglPanen))),
               ],
             );

@@ -15,8 +15,17 @@ class TujuanPengirimanPage extends ConsumerStatefulWidget {
 }
 
 class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
+  String? _selectedTipe;
+
   Future<void> _refreshData() async {
-    await ref.read(tujuanPengirimanProvider.notifier).refreshTujuanPengiriman();
+    await ref.read(tujuanPengirimanProvider.notifier).refreshTujuanPengiriman(tipe: _selectedTipe);
+  }
+
+  void _onFilterChanged(String? newValue) {
+    setState(() {
+      _selectedTipe = newValue;
+    });
+    ref.read(tujuanPengirimanProvider.notifier).loadTujuanPengiriman(tipe: newValue);
   }
 
   void _showAddDialog() {
@@ -89,6 +98,31 @@ class _TujuanPengirimanPageState extends ConsumerState<TujuanPengirimanPage> {
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Filter Button
+          PopupMenuButton<String>(
+            icon: const Icon(LucideIcons.filter),
+            tooltip: 'Filter Tipe',
+            onSelected: _onFilterChanged,
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem<String>(
+                  value: null,
+                  child: Text('Semua Tipe'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'internal',
+                  child: Text('Internal'),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'external',
+                  child: Text('External'),
+                ),
+              ];
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,

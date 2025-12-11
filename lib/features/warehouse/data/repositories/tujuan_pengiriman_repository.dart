@@ -9,7 +9,7 @@ final tujuanPengirimanRepositoryProvider =
 });
 
 abstract class TujuanPengirimanRepository {
-  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList();
+  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList({String? tipe});
   Future<TujuanPengirimanModel> getTujuanPengirimanById(String id);
   Future<TujuanPengirimanModel> createTujuanPengiriman(
       String nama, String tipe, String alamat, String kontak);
@@ -24,8 +24,8 @@ class TujuanPengirimanRepositoryImpl implements TujuanPengirimanRepository {
   TujuanPengirimanRepositoryImpl(this._dataSource);
 
   @override
-  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList() {
-    return _dataSource.getTujuanPengirimanList();
+  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList({String? tipe}) {
+    return _dataSource.getTujuanPengirimanList(tipe: tipe);
   }
 
   @override

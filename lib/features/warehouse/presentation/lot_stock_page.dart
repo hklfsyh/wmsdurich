@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/features/warehouse/data/models/lot_models.dart';
+import 'package:wms_durich/features/warehouse/presentation/draft_lot_selection_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_detail_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/lot_provider.dart';
 
@@ -25,6 +26,18 @@ class _LotStockPageState extends ConsumerState<LotStockPage> {
           icon: const Icon(LucideIcons.arrowLeft),
           onPressed: () => Navigator.pop(context),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DraftLotSelectionPage(),
+            ),
+          );
+        },
+        backgroundColor: AppColors.primary,
+        child: const Icon(LucideIcons.plus, color: Colors.white),
       ),
       body: Column(
         children: [

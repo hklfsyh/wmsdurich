@@ -44,8 +44,8 @@ class ShipmentState {
 }
 
 class ShipmentNotifier extends Notifier<ShipmentState> {
-  late final ShipmentRepository _repository;
-  late final LotRepository _lotRepository;
+  late ShipmentRepository _repository;
+  late LotRepository _lotRepository;
 
   @override
   ShipmentState build() {
