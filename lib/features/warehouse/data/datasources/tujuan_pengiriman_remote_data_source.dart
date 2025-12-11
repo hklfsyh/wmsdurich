@@ -9,7 +9,7 @@ final tujuanPengirimanRemoteDataSourceProvider =
 });
 
 abstract class TujuanPengirimanRemoteDataSource {
-  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList();
+  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList({String? tipe});
   Future<TujuanPengirimanModel> getTujuanPengirimanById(String id);
   Future<TujuanPengirimanModel> createTujuanPengiriman(
       CreateTujuanPengirimanRequest request);
@@ -25,9 +25,14 @@ class TujuanPengirimanRemoteDataSourceImpl
   TujuanPengirimanRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList() async {
+  Future<List<TujuanPengirimanModel>> getTujuanPengirimanList({String? tipe}) async {
     try {
-      final response = await _dio.get('/v1/tujuan-pengiriman');
+      final queryParams = <String, dynamic>{};
+      if (tipe != null && tipe.isNotEmpty) {
+        queryParams['tipe'] = tipe;
+      }
+      
+      final response = await _dio.get('/v1/tujuan-pengiriman', queryParameters: queryParams);
 
       if (response.statusCode == 200) {
         final responseData = TujuanPengirimanListResponse.fromJson(response.data);

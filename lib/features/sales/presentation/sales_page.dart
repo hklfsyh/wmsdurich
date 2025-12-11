@@ -9,6 +9,7 @@ import 'package:wms_durich/features/sales/data/models/sales_models.dart';
 import 'package:wms_durich/features/sales/presentation/providers/sales_provider.dart';
 import 'package:wms_durich/features/warehouse/presentation/providers/shipment_provider.dart';
 import 'package:wms_durich/features/warehouse/data/models/shipment_models.dart';
+import 'package:wms_durich/features/warehouse/data/repositories/shipment_repository.dart';
 
 class SalesPage extends ConsumerStatefulWidget {
   const SalesPage({super.key});
@@ -538,6 +539,53 @@ class _CreateSalesDialogState extends ConsumerState<CreateSalesDialog> {
   String _selectedTipeJual = 'KILOAN';
   final _beratController = TextEditingController();
   final _hargaController = TextEditingController();
+  
+  List<ShipmentModel> _shipments = [];
+  bool _isLoadingShipments = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadShipments();
+  }
+
+  Future<void> _loadShipments() async {
+    setState(() => _isLoadingShipments = true);
+    try {
+      final repository = ref.read(shipmentRepositoryProvider);
+      final data = await repository.getShipments(
+        type: 'outgoing',
+        tujuanType: 'external',
+        status: 'SENDING', // Assuming we only want SENDING or SHIPPED. 
+        // NOTE: If backend handles filtering multiple statuses, great. 
+        // If not, we might need to fetch and filter.
+        // Based on user request, endpoint is GET /v1/shipments?type=outgoing&tujuan_type=external
+        // It doesn't specify status in the request, but previously we filtered by SENDING/SHIPPED.
+        // I will rely on client filtering for status if backend returns everything, or pass status if needed.
+        // Let's pass status 'SENDING' for now as logic usually suggests only sending shipments are valid for sales?
+        // Or 'SHIPPED'? User said "shipment yang muncul itu shipment yang outgoing dan external".
+        // Let's NOT pass status filter to API if not requested, but filter result client side if needed.
+        // Actually, user showed response with status "SENDING".
+        // Let's just fetch type=outgoing & tujuan_type=external.
+      );
+      
+      // Filter locally for status if needed, or take all.
+      // Previous logic was: status == 'SENDING' || status == 'SHIPPED'
+      final filtered = data.where((s) => s.status == 'SENDING' || s.status == 'SHIPPED').toList();
+
+      if (mounted) {
+        setState(() {
+          _shipments = filtered;
+          _isLoadingShipments = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingShipments = false);
+        // Optionally show error
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -548,12 +596,6 @@ class _CreateSalesDialogState extends ConsumerState<CreateSalesDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Only show shipments that are active (SHIPPED/SENDING)
-    // Filter logic can be improved based on business rules
-    final shipments = ref.watch(shipmentProvider).shipments
-        .where((s) => s.status == 'SENDING' || s.status == 'SHIPPED')
-        .toList();
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SingleChildScrollView(
@@ -594,33 +636,36 @@ class _CreateSalesDialogState extends ConsumerState<CreateSalesDialog> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  value: _selectedShipmentId,
-                  decoration: InputDecoration(
-                    labelText: 'Pilih Pengiriman',
-                    prefixIcon: const Icon(LucideIcons.truck),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                if (_isLoadingShipments)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  DropdownButtonFormField<String>(
+                    value: _selectedShipmentId,
+                    decoration: InputDecoration(
+                      labelText: 'Pilih Pengiriman',
+                      prefixIcon: const Icon(LucideIcons.truck),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
+                    items: _shipments.map((shipment) {
+                      return DropdownMenuItem(
+                        value: shipment.id,
+                        child: Text('${shipment.kode} - ${shipment.tujuan}'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedShipmentId = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Pilih pengiriman';
+                      }
+                      return null;
+                    },
                   ),
-                  items: shipments.map((shipment) {
-                    return DropdownMenuItem(
-                      value: shipment.id,
-                      child: Text('${shipment.id} - ${shipment.tujuan}'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedShipmentId = value;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Pilih pengiriman';
-                    }
-                    return null;
-                  },
-                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _selectedTipeJual,

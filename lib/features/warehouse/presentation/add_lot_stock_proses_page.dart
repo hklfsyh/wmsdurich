@@ -8,7 +8,14 @@ import 'package:wms_durich/features/warehouse/presentation/providers/lot_provide
 import 'package:wms_durich/features/warehouse/presentation/providers/master_data_provider.dart';
 
 class AddLotStockProsesPage extends ConsumerStatefulWidget {
-  const AddLotStockProsesPage({super.key});
+  final String? resumeLotId;
+  final String? resumeLotKode;
+
+  const AddLotStockProsesPage({
+    super.key,
+    this.resumeLotId,
+    this.resumeLotKode,
+  });
 
   @override
   ConsumerState<AddLotStockProsesPage> createState() =>
@@ -17,7 +24,7 @@ class AddLotStockProsesPage extends ConsumerStatefulWidget {
 
 class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
   // Stage: 'create' or 'scanning'
-  String _stage = 'create';
+  late String _stage;
 
   // Create Lot Stage
   String? _selectedJenisDurianId;
@@ -45,6 +52,49 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
   List<LotDetailItem> _scannedItems = [];
 
   bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.resumeLotId != null) {
+      _stage = 'scanning';
+      _createdLotId = widget.resumeLotId;
+      _createdLotKode = widget.resumeLotKode;
+      // Load existing items
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadExistingLotData();
+      });
+    } else {
+      _stage = 'create';
+    }
+  }
+
+  Future<void> _loadExistingLotData() async {
+    if (_createdLotId == null) return;
+    
+    setState(() => _isProcessing = true);
+    try {
+      final repository = ref.read(lotRepositoryProvider);
+      final response = await repository.getLotDetail(_createdLotId!);
+
+      setState(() {
+        _scannedItems = response.items;
+        _totalItems = response.header.currentQty;
+        _totalBerat = response.header.currentBerat;
+        // Also update code if not provided or different
+        _createdLotKode = response.header.kode;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading lot data: $e')),
+        );
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -201,6 +251,12 @@ class _AddLotStockProsesPageState extends ConsumerState<AddLotStockProsesPage> {
       // Refresh data from API
       final repository = ref.read(lotRepositoryProvider);
       final response = await repository.getLotDetail(_createdLotId!);
+
+      // Invalidate warehouse data to ensure counts (like raw fruit) are updated in Warehouse Page
+      ref.invalidate(warehouseDataProvider);
+      
+      // Invalidate draft lots list as stats changed
+      ref.invalidate(allDraftLotsProvider);
 
       setState(() {
         _scannedItems = response.items;

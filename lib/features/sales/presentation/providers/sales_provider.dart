@@ -27,7 +27,7 @@ class SalesState {
 }
 
 class SalesNotifier extends Notifier<SalesState> {
-  late final SalesRepository _repository;
+  late SalesRepository _repository;
 
   @override
   SalesState build() {

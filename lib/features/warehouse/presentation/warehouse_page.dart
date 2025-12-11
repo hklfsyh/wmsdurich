@@ -4,7 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:wms_durich/core/theme/app_colors.dart';
 import 'package:wms_durich/core/widgets/profile_dropdown.dart';
 import 'package:wms_durich/features/auth/presentation/providers/auth_provider.dart';
-import 'package:wms_durich/features/warehouse/presentation/add_lot_stock_proses_page.dart';
+import 'package:wms_durich/features/warehouse/presentation/draft_lot_selection_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/list_buah_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/lot_stock_page.dart';
 import 'package:wms_durich/features/warehouse/presentation/shipment_list_page.dart';
@@ -15,10 +15,10 @@ class WarehousePage extends ConsumerWidget {
   const WarehousePage({super.key});
 
   void _showAddLotStockDialog(BuildContext context) {
-    // Navigasi langsung ke halaman Buat Lot Baru
+    // Navigasi ke halaman pilihan draft lot (DraftLotSelectionPage)
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddLotStockProsesPage()),
+      MaterialPageRoute(builder: (context) => const DraftLotSelectionPage()),
     );
   }
 

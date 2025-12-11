@@ -9,7 +9,7 @@ final shipmentRepositoryProvider = Provider<ShipmentRepository>((ref) {
 });
 
 abstract class ShipmentRepository {
-  Future<List<ShipmentModel>> getShipments({String? status, String? type});
+  Future<List<ShipmentModel>> getShipments({String? status, String? type, String? tujuanType});
   Future<ShipmentDetailResponse> getShipmentDetail(String id);
   Future<ShipmentModel> createShipment(String tujuanId, DateTime tglKirim);
   Future<void> addItemToShipment(String id, String lotId, int qty, double berat);
@@ -25,8 +25,8 @@ class ShipmentRepositoryImpl implements ShipmentRepository {
   ShipmentRepositoryImpl(this._dataSource);
 
   @override
-  Future<List<ShipmentModel>> getShipments({String? status, String? type}) {
-    return _dataSource.getShipments(status: status, type: type);
+  Future<List<ShipmentModel>> getShipments({String? status, String? type, String? tujuanType}) {
+    return _dataSource.getShipments(status: status, type: type, tujuanType: tujuanType);
   }
 
   @override

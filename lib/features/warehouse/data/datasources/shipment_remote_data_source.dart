@@ -10,7 +10,7 @@ final shipmentRemoteDataSourceProvider = Provider<ShipmentRemoteDataSource>((ref
 });
 
 abstract class ShipmentRemoteDataSource {
-  Future<List<ShipmentModel>> getShipments({String? status, String? type});
+  Future<List<ShipmentModel>> getShipments({String? status, String? type, String? tujuanType});
   Future<ShipmentDetailResponse> getShipmentDetail(String id);
   Future<ShipmentModel> createShipment(CreateShipmentRequest request);
   Future<void> addItemToShipment(String id, AddItemToShipmentRequest request);
@@ -26,7 +26,7 @@ class ShipmentRemoteDataSourceImpl implements ShipmentRemoteDataSource {
   ShipmentRemoteDataSourceImpl(this._dio);
 
   @override
-  Future<List<ShipmentModel>> getShipments({String? status, String? type}) async {
+  Future<List<ShipmentModel>> getShipments({String? status, String? type, String? tujuanType}) async {
     try {
       final queryParams = <String, dynamic>{};
       if (status != null && status.isNotEmpty) {
@@ -34,6 +34,9 @@ class ShipmentRemoteDataSourceImpl implements ShipmentRemoteDataSource {
       }
       if (type != null && type.isNotEmpty) {
         queryParams['type'] = type;
+      }
+      if (tujuanType != null && tujuanType.isNotEmpty) {
+        queryParams['tujuan_type'] = tujuanType;
       }
       
       final response = await _dio.get('/v1/shipments', queryParameters: queryParams);
